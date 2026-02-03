@@ -1,11 +1,11 @@
 package main
 
 import (
-    "bufio"
-    "fmt"
-    "os"
-		"io/fs"
-		"strings"
+	"bufio"
+	"fmt"
+	"io/fs"
+	"os"
+	"strings"
 )
 
 const (
@@ -27,7 +27,6 @@ const (
 	`
 )
 
-
 type MarkdownElement uint8
 
 const (
@@ -45,18 +44,32 @@ const (
 	MarkdownCount
 )
 
-var htmlString = [MarkdownCount]string {
-	Header: `<h%d id="%s">%s</h%d>`,
-	Subheader: `<p class="subtitle">%s</p>`,
-	Paragraph: `<p>%s</p>`,
-	Link: `<a href="%s">%s</a>`,
-	SideNote: `<label for="sn-%s" class="margin-toggle sidenote-number"></label><input type="checkbox" id="sn-%s" class="margin-toggle"><span class="sidenote">%s</span>`,
+var htmlString = [MarkdownCount]string{
+	Header:     `<h%d id="%s">%s</h%d>`,
+	Subheader:  `<p class="subtitle">%s</p>`,
+	Paragraph:  `<p>%s</p>`,
+	Link:       `<a href="%s">%s</a>`,
+	SideNote:   `<label for="sn-%s" class="margin-toggle sidenote-number"></label><input type="checkbox" id="sn-%s" class="margin-toggle"><span class="sidenote">%s</span>`,
 	MarginNote: ``,
-	Code: `<pre><code>%s</code></pre>`,
+	Code:       `<pre><code>%s</code></pre>`,
 	InlineCode: `<code>%s</code>`,
-	Image: `<figure src="%s">%s</figure>`,
-	Italic: `<em>%s</em>`,
-	Bold: `<b>%s</b>`,
+	Image:      `<figure src="%s">%s</figure>`,
+	Italic:     `<em>%s</em>`,
+	Bold:       `<b>%s</b>`,
+}
+
+var markdownString = [MarkdownCount]string{
+	Header:     "#",
+	Subheader:  "[sub-header]",
+	Paragraph:  "",
+	Link:       "regexp",
+	SideNote:   "[^side-note]",
+	MarginNote: "[^margin-note]",
+	Code:       "```",
+	InlineCode: "`",
+	Image:      "regexp",
+	Italic:     "**",
+	Bold:       "*",
 }
 
 type State uint8
@@ -84,7 +97,7 @@ func ParseLine(line string) (string, State) {
 		startIndexID := strings.IndexRune(line, '{')
 		if startIndexID > headerNumber {
 			// Get the actual id
-			id = header[startIndexID-1:len(header)-1]
+			id = header[startIndexID-1 : len(header)-1]
 			header = header[:startIndexID-3]
 		}
 
@@ -101,28 +114,44 @@ func ParseLine(line string) (string, State) {
 	}
 
 	// Subheader @subheader
-	
-	
+
 	// What can go to a paragraph?
 	// - Link
 	// - Inline code
 	// - Sidenote
-	
+
 	// What can go into images?
 	// - Margin note
 
 	// What will never go alone?
 	// - Side notes
 	// - Margin notes
-	
-	// Side note [*side-note](side note)
+
+	// Side note [^side-note](side note)
 	// Margin note [^margin-note](margin note)
 	// Code -- How it is done in Markdwon
 	// Image -- ![alt-text](filepath)
 	// Paragraph
+	// Search for link, inline code, sidenote
+	var sidenotes []string // [^side-note]
+	index := strings.Index(line, markdownString[SideNote])
+	endIndex := strings.IndexRune(line, ')')
+	var sidenoteNumber uint8
+	for index > 0 {
+		sidenote := line[index:endIndex]
+		strings.Replace(line, sidenote, "%s", 1)
+
+		// Replace sidenote with the actual one we want
+		idx := strings.IndexRune(sidenote, '(')
+		sidenote = sidenote[idx : len(sidenote)-2]
+		sidenotes = append(sidenotes, fmt.Sprintf(htmlString[SideNote], sidenoteNumber, sidenoteNumber, sidenote))
+		index = strings.Index(line, markdownString[SideNote])
+	}
+
+	var links []string
+
 	return fmt.Sprintf(htmlString[Paragraph], line), InsideSection
 }
-
 
 // Maybe this approach is too naive. The problem is that sometimes I like to add Introduction while other I don't. I need to put both and the only way is to build a structure around into
 // I need to make some building blocks around them, but that would complicate a lot things... I still need to thing how to do it.
@@ -130,11 +159,10 @@ func ParseLine(line string) (string, State) {
 func main() {
 	file, err := os.OpenFile("./example.md", os.O_RDONLY, fs.ModeDevice)
 	if err != nil {
-		fmt.Errorf("error opening the file: %w", err)
+		fmt.Println("error opening the file: %w", err)
 		return
 	}
 	defer file.Close()
-
 
 	scanner := bufio.NewScanner(file)
 
@@ -144,7 +172,7 @@ func main() {
 		// name := file.Name()
 		// Generate the proper HTML page from markdown
 		// Need to keep track of where am I. For that I can make some sort of state machine
-		
+
 		text, newState := ParseLine(scanner.Text())
 
 		switch newState {
@@ -168,7 +196,6 @@ func main() {
 		oldState = newState
 	}
 	html.WriteString("</section>")
-
 
 	fmt.Print(html.String())
 }
