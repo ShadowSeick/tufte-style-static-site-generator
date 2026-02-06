@@ -2,9 +2,12 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
+	"regexp"
 	"strings"
 )
 
@@ -50,26 +53,67 @@ var htmlString = [MarkdownCount]string{
 	Paragraph:  `<p>%s</p>`,
 	Link:       `<a href="%s">%s</a>`,
 	SideNote:   `<label for="sn-%s" class="margin-toggle sidenote-number"></label><input type="checkbox" id="sn-%s" class="margin-toggle"><span class="sidenote">%s</span>`,
-	MarginNote: ``,
+	MarginNote: `<label for="mn-%s" class="margin-toggle">&#8853;</label><input type="checkbox" id="mn-%s" class="margin-toggle"><span class="marginnote">%s</span>`,
 	Code:       `<pre><code>%s</code></pre>`,
 	InlineCode: `<code>%s</code>`,
-	Image:      `<figure src="%s">%s</figure>`,
+	Image:      `<figure>%s<img src="%s" alt="%s"/></figure>`,
 	Italic:     `<em>%s</em>`,
 	Bold:       `<b>%s</b>`,
 }
 
-var markdownString = [MarkdownCount]string{
-	Header:     "#",
-	Subheader:  "[sub-header]",
-	Paragraph:  "",
-	Link:       "regexp",
-	SideNote:   "[^side-note]",
-	MarginNote: "[^margin-note]",
-	Code:       "```",
-	InlineCode: "`",
-	Image:      "regexp",
-	Italic:     "**",
-	Bold:       "*",
+var markdownRegexp = [MarkdownCount]*regexp.Regexp{
+	Header:     regexp.MustCompile(`^#+\s+(.+)\s+\{@(.+)\}$`),
+	Subheader:  regexp.MustCompile(`\[\^sub-header]\((.+?)\)`),
+	Paragraph:  nil,
+	Link:       regexp.MustCompile(`\[([^\]]+)\]\(([^\)]+)\)`),
+	SideNote:   regexp.MustCompile(`\[\^side-note\]\((.+?)\)`),
+	MarginNote: regexp.MustCompile(`\[\^margin-note\]\((.+?)\)`),
+	Code:       regexp.MustCompile("```([a-z]*)\\n([\\s\\S]+?)```"),
+	InlineCode: regexp.MustCompile("`([^`]+)`"),
+	Image:      regexp.MustCompile(`!\[([^\]]*)\]\(([^\)]+)\)`),
+	Italic:     regexp.MustCompile(`\*\*(.+?)\*\*`),
+	Bold:       regexp.MustCompile(`\*(.+?)\*`),
+}
+
+func (el MarkdownElement) Html(args ...any) string {
+	if el >= MarkdownCount {
+		panic("invalid markdown element")
+	}
+	return fmt.Sprintf(htmlString[el], args...)
+}
+
+func (el MarkdownElement) Match(text string) []string {
+	if el >= MarkdownCount {
+		panic("invalid markdown element")
+	}
+	return markdownRegexp[el].FindStringSubmatch(text)
+}
+
+func (el MarkdownElement) Text(matches []string) (string, string) {
+	switch el {
+	case Header:
+		return matches[1], matches[2]
+	case Subheader:
+		return matches[1], ""
+	case Link:
+		return matches[1], matches[2]
+	case SideNote:
+		return matches[1], ""
+	case MarginNote:
+		return matches[1], ""
+	case Code:
+		return matches[1], matches[2]
+	case InlineCode:
+		return matches[1], ""
+	case Image:
+		return matches[1], matches[2]
+	case Italic:
+		return matches[1], ""
+	case Bold:
+		return matches[1], ""
+	default:
+		panic("element not handled")
+	}
 }
 
 type State uint8
@@ -83,23 +127,16 @@ const (
 
 func ParseLine(line string) (string, State) {
 	// Need only to check at first
-	// HEADER
 	var state State
 	if line == "" {
 		return "", InsideSection
 	}
-	headerNumber := strings.Count(string(line), "#")
-	if headerNumber > 0 {
-		// Get header
-		header := line[headerNumber+1:]
-		// Check for the id
-		var id string
-		startIndexID := strings.IndexRune(line, '{')
-		if startIndexID > headerNumber {
-			// Get the actual id
-			id = header[startIndexID-1 : len(header)-1]
-			header = header[:startIndexID-3]
-		}
+
+	// HEADER
+	matches := Header.Match(line)
+	if matches != nil {
+		headerNumber := strings.Count(string(line), "#")
+		header, id := Header.Text(matches)
 
 		switch headerNumber {
 		case 1:
@@ -110,45 +147,39 @@ func ParseLine(line string) (string, State) {
 			state = InsideSection
 		}
 
-		return fmt.Sprintf(htmlString[Header], headerNumber, id, header, headerNumber), state
+		return Header.Html(headerNumber, id, header, headerNumber), state
 	}
 
-	// Subheader @subheader
+	// SUBHEADER
+	matches = Subheader.Match(line)
+	if matches != nil {
+		subheader, _ := Subheader.Text(matches)
+		return Subheader.Html(subheader), Title
+	}
 
+	// IMAGE
+	matches = Image.Match(line)
+	if matches != nil {
+		alt, path := Image.Text(matches)
+
+		// Margin note
+		var marginNote string
+		marginMatch := MarginNote.Match(line)
+		if marginMatch != nil {
+			// Check for bold and italic
+			marginNote, _ = MarginNote.Text(marginMatch)
+		}
+		return Image.Html(MarginNote.Html(marginNote), path, alt), InsideSection
+	}
+	
 	// What can go to a paragraph?
 	// - Link
 	// - Inline code
 	// - Sidenote
 
-	// What can go into images?
-	// - Margin note
-
-	// What will never go alone?
-	// - Side notes
-	// - Margin notes
-
-	// Side note [^side-note](side note)
-	// Margin note [^margin-note](margin note)
 	// Code -- How it is done in Markdwon
-	// Image -- ![alt-text](filepath)
 	// Paragraph
 	// Search for link, inline code, sidenote
-	var sidenotes []string // [^side-note]
-	index := strings.Index(line, markdownString[SideNote])
-	endIndex := strings.IndexRune(line, ')')
-	var sidenoteNumber uint8
-	for index > 0 {
-		sidenote := line[index:endIndex]
-		strings.Replace(line, sidenote, "%s", 1)
-
-		// Replace sidenote with the actual one we want
-		idx := strings.IndexRune(sidenote, '(')
-		sidenote = sidenote[idx : len(sidenote)-2]
-		sidenotes = append(sidenotes, fmt.Sprintf(htmlString[SideNote], sidenoteNumber, sidenoteNumber, sidenote))
-		index = strings.Index(line, markdownString[SideNote])
-	}
-
-	var links []string
 
 	return fmt.Sprintf(htmlString[Paragraph], line), InsideSection
 }
@@ -164,16 +195,35 @@ func main() {
 	}
 	defer file.Close()
 
-	scanner := bufio.NewScanner(file)
+	reader := bufio.NewReader(file)
 
 	oldState := Title
 	var html strings.Builder
-	for scanner.Scan() {
-		// name := file.Name()
-		// Generate the proper HTML page from markdown
-		// Need to keep track of where am I. For that I can make some sort of state machine
+	// Instead of using this, use the raw read and break it into lines, this way I can proccess the exact same structure when I have some code
+	var endOfLine bool
+	for !endOfLine {
+		line, err := reader.ReadString('\n')
+		if err != nil {
+			if !errors.Is(io.EOF, err) {
+				fmt.Println(fmt.Sprintf("error while reading string: %v", err))
+				return
+			}
+			break
+		}
 
-		text, newState := ParseLine(scanner.Text())
+		if startingCodeText := strings.Index(line, "```"); startingCodeText >= 0 {
+			code, err := reader.ReadString('`')
+			if err != nil {
+				fmt.Println("error trying to read code:", err)
+				return
+			}
+
+			line += code
+			line += "```"
+			reader.Discard(4) // Dicard last 3 bytes ``\n
+		}
+
+		text, newState := ParseLine(line[:len(line)-1])
 
 		switch newState {
 		case Title:
