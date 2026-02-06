@@ -165,6 +165,7 @@ func ParseLine(line string) (string, State) {
 		// Margin note
 		var marginNote string
 		marginMatch := MarginNote.Match(line)
+		// Need to match for bold, italic, link and inline code
 		if marginMatch != nil {
 			// Check for bold and italic
 			marginNote, _ = MarginNote.Text(marginMatch)
@@ -173,9 +174,13 @@ func ParseLine(line string) (string, State) {
 	}
 	
 	// What can go to a paragraph?
+	// - Sidenote
+
+	// What can go inside everything?
 	// - Link
 	// - Inline code
-	// - Sidenote
+	// - Bold
+	// - Italic
 
 	// Code -- How it is done in Markdwon
 	// Paragraph
