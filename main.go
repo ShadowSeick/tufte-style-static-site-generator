@@ -19,7 +19,10 @@ const (
 		<meta charset="utf-8">
 		<title>%s</title>
 		<link rel="stylesheet" href="assets/tufte.css"/>
+		<link rel="stylesheet" href="assets/default.min.css">
+		<script src="assets/highlight.min.js"></script>
 		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<script>hljs.highlightAll();</script>
 	</head>
 	<body>
 		<article>
@@ -54,7 +57,7 @@ var htmlString = [MarkdownCount]string{
 	Link:       `<a href="%s">%s</a>`,
 	SideNote:   `<label for="sn-%s" class="margin-toggle sidenote-number"></label><input type="checkbox" id="sn-%s" class="margin-toggle"><span class="sidenote">%s</span>`,
 	MarginNote: `<label for="mn-%s" class="margin-toggle">&#8853;</label><input type="checkbox" id="mn-%s" class="margin-toggle"><span class="marginnote">%s</span>`,
-	Code:       `<pre><code>%s</code></pre>`,
+	Code:       `<pre><code class="language-%s">%s</code></pre>`,
 	InlineCode: `<code>%s</code>`,
 	Image:      `<figure>%s<img src="%s" alt="%s"/></figure>`,
 	Italic:     `<em>%s</em>`,
@@ -172,6 +175,12 @@ func ParseLine(line string) (string, State) {
 		}
 		return Image.Html(MarginNote.Html(marginNote), path, alt), InsideSection
 	}
+
+	matches = Code.Match(line)
+	if matches != nil {
+		language, code := Code.Text(matches)
+		return Code.Html(language, code), InsideSection
+	}
 	
 	// What can go to a paragraph?
 	// - Sidenote
@@ -252,5 +261,5 @@ func main() {
 	}
 	html.WriteString("</section>")
 
-	fmt.Print(html.String())
+	fmt.Print(fmt.Sprintf(template, file.Name(), html.String()))
 }
