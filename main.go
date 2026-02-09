@@ -52,71 +52,101 @@ const (
 
 var htmlString = [MarkdownCount]string{
 	Header:     `<h%d id="%s">%s</h%d>`,
-	Subheader:  `<p class="subtitle">%s</p>`,
+	Subheader:  `<p class="subtitle">${text}</p>`,
 	Paragraph:  `<p>%s</p>`,
-	Link:       `<a href="%s">%s</a>`,
+	Link:       `<a href="${url}">${text}</a>`,
 	SideNote:   `<label for="sn-%s" class="margin-toggle sidenote-number"></label><input type="checkbox" id="sn-%s" class="margin-toggle"><span class="sidenote">%s</span>`,
 	MarginNote: `<label for="mn-%s" class="margin-toggle">&#8853;</label><input type="checkbox" id="mn-%s" class="margin-toggle"><span class="marginnote">%s</span>`,
-	Code:       `<pre><code class="language-%s">%s</code></pre>`,
-	InlineCode: `<code>%s</code>`,
-	Image:      `<figure>%s<img src="%s" alt="%s"/></figure>`,
-	Italic:     `<em>%s</em>`,
-	Bold:       `<b>%s</b>`,
+	Code:       `<pre><code class="language-${lang}">${code}</code></pre>`,
+	InlineCode: `<code>${code}</code>`,
+	Image:      `<img src="${url}" alt="${alt}"/>`,
+	Italic:     `<em>${text}</em>`,
+	Bold:       `<b>${text}</b>`,
 }
 
 var markdownRegexp = [MarkdownCount]*regexp.Regexp{
-	Header:     regexp.MustCompile(`^#+\s+(.+)\s+\{@(.+)\}$`),
-	Subheader:  regexp.MustCompile(`\[\^sub-header]\((.+?)\)`),
+	Header:     regexp.MustCompile(`^(?P<hashes>#+)\s+(?P<text>.+)\s+\{@(?P<id>.+)\}$`),
+	Subheader:  regexp.MustCompile(`\[\^sub-header\]\((?P<text>.+?)\)`),
 	Paragraph:  nil,
-	Link:       regexp.MustCompile(`\[([^\]]+)\]\(([^\)]+)\)`),
-	SideNote:   regexp.MustCompile(`\[\^side-note\]\((.+?)\)`),
-	MarginNote: regexp.MustCompile(`\[\^margin-note\]\((.+?)\)`),
-	Code:       regexp.MustCompile("```([a-z]*)\\n([\\s\\S]+?)```"),
-	InlineCode: regexp.MustCompile("`([^`]+)`"),
-	Image:      regexp.MustCompile(`!\[([^\]]*)\]\(([^\)]+)\)`),
-	Italic:     regexp.MustCompile(`\*\*(.+?)\*\*`),
-	Bold:       regexp.MustCompile(`\*(.+?)\*`),
+	Link:       regexp.MustCompile(`\[(?P<text>[^\]]+)\]\((?P<url>[^\)]+)\)`),
+	SideNote:   regexp.MustCompile(`\[\^side-note @(?P<id>[^\]]+)\]`),
+	MarginNote: regexp.MustCompile(`\[\^margin-note @(?P<id>[^\]]+)\]`),
+	Code:       regexp.MustCompile("```(?P<lang>[a-z]*)\\n(?P<code>[\\s\\S]+?)```"),
+	InlineCode: regexp.MustCompile("`(?P<code>[^`]+)`"),
+	Image:      regexp.MustCompile(`!\[(?P<alt>[^\]]*)\]\((?P<url>[^\)]+)\)`),
+	Italic:     regexp.MustCompile(`\*\*(?P<text>.+?)\*\*`),
+	Bold:       regexp.MustCompile(`\*(?P<text>.+?)\*`),
 }
 
-func (el MarkdownElement) Html(args ...any) string {
+func (el MarkdownElement) Html(text string) (string, bool) {
 	if el >= MarkdownCount {
 		panic("invalid markdown element")
 	}
-	return fmt.Sprintf(htmlString[el], args...)
-}
 
-func (el MarkdownElement) Match(text string) []string {
-	if el >= MarkdownCount {
-		panic("invalid markdown element")
+	if el != Paragraph && !markdownRegexp[el].MatchString(text) {
+		return text, false
 	}
-	return markdownRegexp[el].FindStringSubmatch(text)
-}
 
-func (el MarkdownElement) Text(matches []string) (string, string) {
+	result := text
 	switch el {
 	case Header:
-		return matches[1], matches[2]
-	case Subheader:
-		return matches[1], ""
-	case Link:
-		return matches[1], matches[2]
-	case SideNote:
-		return matches[1], ""
-	case MarginNote:
-		return matches[1], ""
-	case Code:
-		return matches[1], matches[2]
-	case InlineCode:
-		return matches[1], ""
+		matches := markdownRegexp[Header].FindStringSubmatch(text)
+		level := len(matches[1])
+		id := matches[3]
+		text := matches[2]
+
+		result = fmt.Sprintf(`<h%d id="%s">%s</h%d>`, level, id, text, level)
+	case SideNote, MarginNote: // This is fucking ugly but it works. Maybe there is a better way to do it later
+		var newText strings.Builder
+
+		endIndex := len(text) -1
+		for _, match := range markdownRegexp[el].FindAllStringIndex(text, -1) {
+			// Write until match
+			newText.WriteString(text[:match[0]])
+
+			// Get index if any
+			startIndexID := strings.IndexRune(text[match[0]:match[1]], '@')
+			var id string
+			if startIndexID >= 0 {
+				id = text[startIndexID+match[0]+1:match[1]-1]
+				fmt.Println("ID:", id)
+			}
+			
+			// Get Balanced parenthesis
+			startParenthesis := match[1] + 1
+			endParenthesis := len(text) - 1
+			numberParenthesis := 1
+			for pos, char := range text[startParenthesis:] {
+				if char == '(' {
+					numberParenthesis += 1
+				}
+				if char == ')' {
+					numberParenthesis -= 1
+				}
+				if numberParenthesis == 0 {
+					endParenthesis = startParenthesis + pos
+					break
+				}
+			}
+
+			newText.WriteString(fmt.Sprintf(htmlString[el], id, id, text[startParenthesis:endParenthesis]))
+			endIndex = endParenthesis
+		}
+
+		if endIndex != len(text) -1 {
+			newText.WriteString(text[endIndex+1:])
+		}
+		
+		result = newText.String()
 	case Image:
-		return matches[1], matches[2]
-	case Italic:
-		return matches[1], ""
-	case Bold:
-		return matches[1], ""
+		result = fmt.Sprintf("<figure>%s</figure>", markdownRegexp[Image].ReplaceAllString(text, htmlString[Image]))
+	case Paragraph:
+		result = fmt.Sprintf(htmlString[el], result)
 	default:
-		panic("element not handled")
+    result = markdownRegexp[el].ReplaceAllString(text, htmlString[el])
 	}
+
+	return result, true
 }
 
 type State uint8
@@ -128,19 +158,17 @@ const (
 	StateCount
 )
 
+var parseOrder = []MarkdownElement{Italic, Bold, InlineCode, Link, SideNote, MarginNote}
 func ParseLine(line string) (string, State) {
-	// Need only to check at first
-	var state State
 	if line == "" {
 		return "", InsideSection
 	}
 
-	// HEADER
-	matches := Header.Match(line)
-	if matches != nil {
+	result, match := Header.Html(line)
+	if match {
 		headerNumber := strings.Count(string(line), "#")
-		header, id := Header.Text(matches)
 
+		var state State
 		switch headerNumber {
 		case 1:
 			state = Title
@@ -150,56 +178,32 @@ func ParseLine(line string) (string, State) {
 			state = InsideSection
 		}
 
-		return Header.Html(headerNumber, id, header, headerNumber), state
+		return result, state
 	}
 
-	// SUBHEADER
-	matches = Subheader.Match(line)
-	if matches != nil {
-		subheader, _ := Subheader.Text(matches)
-		return Subheader.Html(subheader), Title
+	result, match = Subheader.Html(line)
+	if match {
+		return result, Title
 	}
 
-	// IMAGE
-	matches = Image.Match(line)
-	if matches != nil {
-		alt, path := Image.Text(matches)
-
-		// Margin note
-		var marginNote string
-		marginMatch := MarginNote.Match(line)
-		// Need to match for bold, italic, link and inline code
-		if marginMatch != nil {
-			// Check for bold and italic
-			marginNote, _ = MarginNote.Text(marginMatch)
-		}
-		return Image.Html(MarginNote.Html(marginNote), path, alt), InsideSection
+	result, match = Code.Html(line)
+	if match {
+		return result, InsideSection
 	}
 
-	matches = Code.Match(line)
-	if matches != nil {
-		language, code := Code.Text(matches)
-		return Code.Html(language, code), InsideSection
+	for _, markdownEl := range parseOrder {
+		result, _ = markdownEl.Html(line)
 	}
-	
-	// What can go to a paragraph?
-	// - Sidenote
 
-	// What can go inside everything?
-	// - Link
-	// - Inline code
-	// - Bold
-	// - Italic
+	result, match = Image.Html(line)
+	if match {
+		return result, InsideSection
+	}
 
-	// Code -- How it is done in Markdwon
-	// Paragraph
-	// Search for link, inline code, sidenote
+	result, _ = Paragraph.Html(result)
 
-	return fmt.Sprintf(htmlString[Paragraph], line), InsideSection
+	return result, InsideSection
 }
-
-// Maybe this approach is too naive. The problem is that sometimes I like to add Introduction while other I don't. I need to put both and the only way is to build a structure around into
-// I need to make some building blocks around them, but that would complicate a lot things... I still need to thing how to do it.
 
 func main() {
 	file, err := os.OpenFile("./example.md", os.O_RDONLY, fs.ModeDevice)
