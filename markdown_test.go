@@ -332,9 +332,16 @@ func TestInlineCode(t *testing.T) {
 	}{
 		{
 			name:        "Inline code",
-			input:       "Use `fmt.Println()` to print",
+			input:       "Here we have some thing\nUse `fmt.Println()` to print",
 			shouldMatch: true,
-			expected:    `Use <code>fmt.Println()</code> to print`,
+			expected:    `Here we have some thing
+Use <code>fmt.Println()</code> to print`,
+		},
+		{
+			name: "Inline real code",
+			input: "Maybe `we are dealing with existing code` and we have to work around it or we need to get out that feature so we cannot focus on what’s really important, data. Most of the time, if we have a good data representation, problems and features become easier to solve and the application becomes simpler and easier to maintain. Technical debt can be done by hurry that feature or not thinking twice about the solution we think is the correct one. It also can be develop by changing the needs of the business. Solutions are a matter of time and space, what was once good could no longer be. Refactors exist for a reason and we should do them from time to time, but sometimes if we spend a little more time thinking on the big picture we could make not so expensive refactors nor making features take longer than should be.",
+			shouldMatch: true,
+			expected: "Maybe <code>we are dealing with existing code</code> and we have to work around it or we need to get out that feature so we cannot focus on what’s really important, data. Most of the time, if we have a good data representation, problems and features become easier to solve and the application becomes simpler and easier to maintain. Technical debt can be done by hurry that feature or not thinking twice about the solution we think is the correct one. It also can be develop by changing the needs of the business. Solutions are a matter of time and space, what was once good could no longer be. Refactors exist for a reason and we should do them from time to time, but sometimes if we spend a little more time thinking on the big picture we could make not so expensive refactors nor making features take longer than should be.",
 		},
 		{
 			name:        "Multiple inline code",
