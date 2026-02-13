@@ -14,8 +14,6 @@ The program walks through the blog folder. In it, there are different folders co
 - HTML files will be uploaded to: */{article folder name}/{file language}*
 
 ## TODO
-- [IN PROGRESS] Implement Bunny CDN storage API to upload html files and files
-- Upload blog files into CDN storage following structure
 - Change CSS to update the page and make it look better
 - Generate Index.html. It needs to make the articles visible and how they should look like.
 - Create github actions to execute this when merged into main
