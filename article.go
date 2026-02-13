@@ -19,8 +19,8 @@ const (
 	<head>
 		<meta charset="utf-8">
 		<title>%s</title>
-		<link rel="stylesheet" href="assets/styles/tufte.css"/>
-		<script src="assets/scripts/highlight.js"></script>
+		<link rel="stylesheet" href="/assets/styles/tufte.css"/>
+		<script src="/assets/scripts/highlight.js"></script>
 		<meta name="viewport" content="width=device-width, initial-scale=1">
 		<script>hljs.highlightAll();</script>
 	</head>

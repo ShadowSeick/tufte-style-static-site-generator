@@ -67,6 +67,7 @@ func ParseLine(line string) (string, State) {
 	return result, InsideSection
 }
 
+// Maybe this should be done directly passing the article
 func GenerateHTML(path string, template string) (string, error) {
 	file, err := os.OpenFile(path, os.O_RDONLY, fs.ModeDevice)
 	if err != nil {

@@ -55,6 +55,7 @@ func main() {
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
+	// Need to change from reading file to file to make 2 requests and see if they are there or not and upload them if not
 	for _, article := range articles {
 		content, err := GenerateHTML(article.FilePath(), ArticleHtmlTemplate)
 		if err != nil {

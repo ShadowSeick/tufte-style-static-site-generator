@@ -1,4 +1,4 @@
-# The right abstraction
+# The right abstraction {@the-right-abstraction}
 [^sub-header](2026-01-28)
 In programming, we focus a lot in the right abstraction, data structure, algorithm or design pattern. We think a lot about the API endpoints or an interface we expose to the end user, but do we think about the implication of what we are building?
 

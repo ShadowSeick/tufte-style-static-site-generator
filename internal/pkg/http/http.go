@@ -18,7 +18,6 @@ func Get(ctx context.Context, req Request) ([]byte, error) {
 }
 
 func Put(ctx context.Context, req Request) ([]byte, error) {
-	fmt.Println(req.URL)
 	putReq, err := makeRequest(ctx, gohttp.MethodPut, req)
 	if err != nil {
 		return nil, fmt.Errorf("error creating put request: %w", err)
