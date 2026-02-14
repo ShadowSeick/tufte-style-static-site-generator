@@ -71,6 +71,6 @@ func NewArticle(language Language, fileBaseName string) (Article, error) {
 	return article, nil
 }
 
-// func (a *Article) HtmlFilePath(tempDirPath string) string {
-// 	return fmt.Sprintf("%s-%s.%s", filepath.Join(tempDirPath, a.name), a.language, HTML.String())
-// }
+func (a *Article) HtmlFilePath(tempDirPath string) string {
+	return fmt.Sprintf("%s-%s.%s", filepath.Join(tempDirPath, a.name), a.language, HTML.String())
+}

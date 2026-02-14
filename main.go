@@ -5,14 +5,20 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"io/fs"
+	"log"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/ShadowSeick/tufte-style-static-site-generator/internal/bunny"
+	"github.com/ShadowSeick/tufte-style-static-site-generator/pkg/flags"
 )
 
 func main() {
+	// Get flags
+	flags.Init()
+	
 	// Build Articles
 	blogPath, err := filepath.Abs(ArticleFolder)
 	if err != nil {
@@ -73,64 +79,70 @@ func main() {
 		return
 	}
 
-	// Upload files
-	bunny.Init()
+	if !flags.IsSet(flags.Debug) {
+		bunny.Init()
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
-	defer cancel()
+		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+		defer cancel()
 
-	var englishFiles []bunny.File
-	var spanishFiles []bunny.File
-	for i := range LanguageCount {
-		files, err := bunny.GetFile(ctx, fmt.Sprintf("%s/%s/", ArticleFolder, i.String()))
-		if err != nil {
-			fmt.Println("error while getting file", err)
+		var englishFiles []bunny.File
+		var spanishFiles []bunny.File
+		for i := range LanguageCount {
+			files, err := bunny.GetFile(ctx, fmt.Sprintf("%s/%s/", ArticleFolder, i.String()))
+			if err != nil {
+				fmt.Println("error while getting file", err)
+				return
+			}
+
+			switch i {
+			case English:
+				englishFiles =	files
+			case Spanish:
+				spanishFiles = files
+			}
+		}
+
+		if err := UploadArticles(ctx, englishArticles, englishFiles); err != nil {
+			fmt.Println(err)
 			return
 		}
 
-		switch i {
-		case English:
-			englishFiles =	files
-		case Spanish:
-			spanishFiles = files
+		if err := UploadArticles(ctx, spanishArticles, spanishFiles); err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		fmt.Println("Finished uploading articles")
+	}
+	
+	// Debug
+	if flags.IsSet(flags.Debug) {
+		if err := os.Mkdir("./debug", 0666); err != nil && !os.IsExist(err) {
+			log.Fatalf("error creating directory")
+		}
+
+		if err := GenerateHTMLFiles(englishArticles, "debug"); err != nil {
+			log.Fatal(err)
+		}
+
+		if err := GenerateHTMLFiles(spanishArticles, "debug"); err != nil {
+			log.Fatal(err)
 		}
 	}
+}
 
-	if err := UploadArticles(ctx, englishArticles, englishFiles); err != nil {
-		fmt.Println(err)
-		return
+func GenerateHTMLFiles(articles []Article, directory string) error {
+	for _, article := range articles {
+		content, err := GenerateHTML(article, ArticleHtmlTemplate)
+		if err != nil {
+			return fmt.Errorf("error generating html file content: %w", err)
+		}
+
+		if err := os.WriteFile(article.HtmlFilePath(directory), []byte(content), 0644); err != nil {
+			return fmt.Errorf("error creating html file: %w", err)
+		}
 	}
-
-	if err := UploadArticles(ctx, spanishArticles, spanishFiles); err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	// Maybe it's a good idea for debugging. Do not delete it now
-	// tempDir, err := os.MkdirTemp("", "temp")
-	// if err != nil {
-	// 	fmt.Println("error while creating temp dir for html files: ", err)
-	// 	return
-	// }
-	//
-	// for _, article := range articles {
-	// 	content, err := GenerateHTML(article.FilePath(), ArticleHtmlTemplate)
-	// 	if err != nil {
-	// 		fmt.Println("error while generating html file content: ", err)
-	// 		return
-	// 	}
-	//
-	// 	path := article.HtmlFilePath(tempDir)
-	// 	fmt.Println(path)
-	// 	if err := os.WriteFile(article.HtmlFilePath(tempDir), []byte(content), 0644); err != nil {
-	// 		fmt.Println("error writting html file: ", err)
-	// 		return
-	// 	}
-	//
-	// 	article.checksum = sha256.Sum256([]byte(content))
-	// }
-	
-	fmt.Println("Finished uploading articles")
+	return nil
 }
 
 func UploadArticles(ctx context.Context, articles []Article, uploadedFiles []bunny.File) error {
