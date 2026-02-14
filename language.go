@@ -11,14 +11,14 @@ var (
 type Language uint8
 
 const (
-	EN Language = iota
-	ES
+	English Language = iota
+	Spanish
 	LanguageCount
 )
 
 var languageNames = [LanguageCount]string{
-	EN: "en",
-	ES: "es",
+	English: "en",
+	Spanish: "es",
 }
 
 func (l Language) String() string {

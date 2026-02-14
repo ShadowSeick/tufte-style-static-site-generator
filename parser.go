@@ -68,8 +68,8 @@ func ParseLine(line string) (string, State) {
 }
 
 // Maybe this should be done directly passing the article
-func GenerateHTML(path string, template string) (string, error) {
-	file, err := os.OpenFile(path, os.O_RDONLY, fs.ModeDevice)
+func GenerateHTML(article Article, template string) (string, error) {
+	file, err := os.OpenFile(article.FilePath(), os.O_RDONLY, fs.ModeDevice)
 	if err != nil {
 		fmt.Println("error opening the file: %w", err)
 		return "", err
@@ -128,5 +128,5 @@ func GenerateHTML(path string, template string) (string, error) {
 	}
 	html.WriteString("</section>")
 
-	return fmt.Sprintf(template, file.Name(), html.String()), nil
+	return fmt.Sprintf(template, article.Title(), html.String()), nil
 }

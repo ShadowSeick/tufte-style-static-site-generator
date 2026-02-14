@@ -25,17 +25,20 @@ var (
 func Init() {
 	initialize.Do(func() {
 		bunnyStorageApiURL = os.Getenv("BUNNY_STORAGE_API_URL")
+		bunnyStorageApiURL = "https://storage.bunnycdn.com/"
 		if bunnyStorageApiURL == "" {
 			panic("bunny storage api url not set")
 		}
 
 		storageZone := os.Getenv("BUNNY_STORAGE_ZONE")
+		storageZone = "nwm-blog"
 		if storageZone == "" {
 			panic("bunny storage zone not set")
 		}
 		bunnyStorageApiURL = fmt.Sprintf("%s%s/", bunnyStorageApiURL, storageZone,)
 
 		accessKey := os.Getenv("BUNNY_STORAGE_ACCESS_KEY")
+		accessKey = "731a4ff4-b200-4105-97ee9f7d8e75-2908-4891"
 		if accessKey == "" {
 			panic("bunny storage access key not set")
 		}
