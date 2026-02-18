@@ -22,11 +22,17 @@ type ContentTypes uint8
 
 const (
 	ApplicationOctetStream ContentTypes = iota
+	ApplicationJavascript
+	TextHTML
+	TextCSS
 	ContentTypesCount
 )
 
 var contentTypeString = [ContentTypesCount]string {
 	ApplicationOctetStream: "application/octet-stream",
+	ApplicationJavascript: "application/javascript",
+	TextHTML: "text/html",
+	TextCSS: "text/css",
 }
 
 func (ct ContentTypes) String() string {

@@ -5,9 +5,6 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"io/fs"
-	"log"
-	"net/http"
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -102,31 +99,7 @@ func main() {
 	
 	// Debug
 	if flags.IsSet(flags.Debug) {
-		if err := os.MkdirAll("./debug/en/", 0777); err != nil && !os.IsExist(err) {
-			log.Fatalf("error creating english articles directory")
-		}
-
-		if err := os.MkdirAll("./debug/es/", 0777); err != nil && !os.IsExist(err) {
-			log.Fatalf("error creating spanish articles directory")
-		}
-
-		if err := generateHTMLFile(articles, domain.ArticleDebugFolder); err != nil {
-			log.Fatal(err)
-		}
-
-		ctx, cancel := context.WithCancel(context.Background())
-		listenToArticleChanges(articles, cancel)
-		go regenerateHTMLFiles(ctx, articles)
-
-		// Run server
-		fs := http.FileServer(http.Dir(domain.ArticleDebugFolder))
-		http.Handle("/", fs)
-
-		log.Print("Listening on :3000...")
-		err := http.ListenAndServe(":3000", nil)
-		if err != nil {
-			log.Fatal(err)
-		}
+		InitDebug(context.Background(), articles)
 	}
 }
 
@@ -143,7 +116,7 @@ func uploadArticles(ctx context.Context, articlesByLanguage map[domain.Language]
 
 			var hasBeenUploaded bool
 
-			files := uploadedFiles[articel.Language]
+			files := uploadedFiles[article.Language]
 			for _, file := range files {
 				if file.Checksum != nil && *file.Checksum == checksum {
 					hasBeenUploaded = true
@@ -153,7 +126,7 @@ func uploadArticles(ctx context.Context, articlesByLanguage map[domain.Language]
 
 			if !hasBeenUploaded {
 				fmt.Println("uploading file...", article.Title())
-				if err := bunny.UploadFile(ctx, article.StorageFilePath(), checksum, []byte(content)); err != nil {
+				if err := bunny.UploadFile(ctx, article.StorageFilePath(domain.ArticleFolder), checksum, []byte(content)); err != nil {
 					fmt.Println("error uploading file", err)
 					return fmt.Errorf("error updating file: %w", err)
 				}

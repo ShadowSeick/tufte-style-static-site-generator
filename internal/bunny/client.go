@@ -7,7 +7,7 @@ import (
 	"os"
 	"sync"
 
-	"github.com/ShadowSeick/tufte-style-static-site-generator/internal/pkg/http"
+	"github.com/ShadowSeick/tufte-style-static-site-generator/internal/http"
 )
 
 // Implementing https://docs.bunny.net/api-reference/storage

@@ -21,7 +21,7 @@ const (
 		<meta charset="utf-8">
 		<title>%s</title>
 		<link rel="stylesheet" href="/assets/styles/tufte.css"/>
-		<script src="/assets/scripts/highlight.js"></script>
+		<script src="/assets/scripts/highlight/highlight.js"></script>
 		<meta name="viewport" content="width=device-width, initial-scale=1">
 		<script>hljs.highlightAll();</script>
 	</head>
@@ -48,8 +48,8 @@ func (a *Article) FilePath() string {
 	return fmt.Sprintf("%s.%s", path, Markdown.String())
 }
 
-func (a *Article) StorageFilePath() string {
-	return fmt.Sprintf("%s/%s/%s.%s", ArticleFolder, a.Language, a.Name, HTML.String())
+func (a *Article) StorageFilePath(directory string) string {
+	return fmt.Sprintf("%s/%s/%s.%s", directory, a.Language, a.Name, HTML.String())
 }
 
 func (a *Article) Title() string {
@@ -70,8 +70,4 @@ func NewArticle(language Language, fileBaseName string) (Article, error) {
 	article.Name = baseName[0]
 	article.Language = language
 	return article, nil
-}
-
-func (a *Article) HtmlFilePath(tempDirPath string) string {
-	return fmt.Sprintf("%s-%s.%s", filepath.Join(tempDirPath, a.Name), a.Language, HTML.String())
 }

@@ -1,7 +1,7 @@
 package bunny
 
 import (
-	"github.com/ShadowSeick/tufte-style-static-site-generator/internal/pkg/http"
+	"github.com/ShadowSeick/tufte-style-static-site-generator/internal/http"
 )
 
 type HTTPError struct {

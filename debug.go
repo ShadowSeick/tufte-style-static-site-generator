@@ -2,7 +2,10 @@ package main
 
 import (
 	"context"
+	"path/filepath"
 	"fmt"
+	"log"
+	"net/http"
 	"os"
 	"sync"
 	"time"
@@ -22,29 +25,50 @@ var (
 
 func InitDebug(ctx context.Context, articlesByLanguage map[domain.Language][]domain.Article) {
 	initialize.Do(func() {
-		if err := os.MkdirAll("./debug/en/", 0777); err != nil && !os.IsExist(err) {
-			log.Fatalf("error creating english articles directory")
+		cwd, _ := os.Getwd()
+		if err := os.MkdirAll(filepath.Join(cwd, domain.ArticleDebugFolder, domain.English.String()), 0755); err != nil && !os.IsExist(err) {
+			log.Fatalf("error creating english articles directory %v", err)
 		}
 
-		if err := os.MkdirAll("./debug/es/", 0777); err != nil && !os.IsExist(err) {
+		if err := os.MkdirAll(filepath.Join(cwd, domain.ArticleDebugFolder, domain.Spanish.String()), 0755); err != nil && !os.IsExist(err) {
 			log.Fatalf("error creating spanish articles directory")
 		}
 
-		for 
-		if err := generateHTMLFile(articles, domain.ArticleDebugFolder); err != nil {
-			log.Fatal(err)
+		newCtx, cancel := context.WithCancel(ctx)
+		var wg sync.WaitGroup
+		for _, articles := range articlesByLanguage {
+			for index, article := range articles {
+				if err := generateHTMLFile(article); err != nil {
+					log.Fatal(err)
+				}
+
+				// Hot reload articles
+				wg.Go(func () {
+					defer wg.Done()
+					listenToArticleChanges(newCtx, index, article, cancel)
+				})
+
+				wg.Go(func () {
+					defer close(changesChannel)
+					wg.Wait()
+				})
+			}
 		}
 
-		_, cancel := context.WithCancel(ctx)
-		listenToArticleChanges(articles, cancel)
-		go regenerateHTMLFiles(ctx, articles)
+		go regenerateHTMLFiles(ctx, articlesByLanguage)
 
 		// Run server
-		fs := http.FileServer(http.Dir(domain.ArticleDebugFolder))
-		http.Handle("/", fs)
+		mux := http.NewServeMux()
 
+		articles := http.FileServer(http.Dir(domain.ArticleDebugFolder))
+		mux.Handle("/articles/", http.StripPrefix("/articles/", articles))
+
+		assets := http.FileServer(http.Dir("assets"))
+		mux.Handle("/assets/", http.StripPrefix("/assets/", assets))
+
+		
 		log.Print("Listening on :3000...")
-		log.Fatal(http.ListenAndServe(":3000", nil))
+		log.Fatal(http.ListenAndServe(":3000", mux))
 	})
 }
 
@@ -52,13 +76,14 @@ func regenerateHTMLFiles(ctx context.Context, articlesByLanguage map[domain.Lang
 	for {
 		select {
 		case <-ctx.Done():
+			fmt.Println("gracefully shutting down")
 			return
 		case article, ok := <-changesChannel:
 			if !ok { // Channel closed
 				return
 			}
 
-			if err := generateHTMLFile(articlesByLanguage[article.language][article.index], domain.ArticleDebugFolder); err != nil {
+			if err := generateHTMLFile(articlesByLanguage[article.language][article.index]); err != nil {
 				fmt.Println("error regenerating html file", articlesByLanguage[article.language][article.index].Name, err)
 				return
 			}
@@ -66,51 +91,48 @@ func regenerateHTMLFiles(ctx context.Context, articlesByLanguage map[domain.Lang
 	}
 }
 
-func listenToArticleChanges(language domain.Language, articles []domain.Article, cancel context.CancelFunc) {
-	defer close(changesChannel)
-
-	var wg sync.WaitGroup
-	for i, article := range articles {
-		wg.Go(func () {
-			defer wg.Done()
-			filePath := article.FilePath()
-			currStat, err := os.Stat(filePath)
+func listenToArticleChanges(ctx context.Context, index int, article domain.Article, cancel context.CancelFunc) {
+	filepath := article.FilePath()
+	currStat, err := os.Stat(filepath)
+	if err != nil {
+		fmt.Println("error has occurred when listening to file stat", filepath, err)
+		cancel()
+		return
+	}
+	ticker := time.NewTicker(5*time.Second)
+	defer ticker.Stop()
+	
+	for {
+		select {
+		case <-ctx.Done():
+			fmt.Println("gracefully shuttinwdown listening to article: ", article.Name)
+			return
+		case <-ticker.C:
+			stat, err := os.Stat(filepath)
 			if err != nil {
-				fmt.Println("error has occurred when listening to file stat", filePath, err)
+				fmt.Println("error has occurred when listening to file stat", filepath, err)
 				cancel()
 				return
 			}
-			
-			for {
-				stat, err := os.Stat(filePath)
-				if err != nil {
-					fmt.Println("error has occurred when listening to file stat", filePath, err)
-					cancel()
-					return
-				}
 
-				if stat.Size() != currStat.Size() || !stat.ModTime().Equal(currStat.ModTime()) {
-					currStat = stat
-					changesChannel <- articleChanged{
-						index: i,
-						language: language,
-					}
+			if stat.Size() != currStat.Size() || !stat.ModTime().Equal(currStat.ModTime()) {
+				currStat = stat
+				changesChannel <- articleChanged{
+					index: index,
+					language: article.Language,
 				}
-
-				time.Sleep(5 * time.Second)
 			}
-		})
+		}
 	}
-	wg.Wait()
 }
 
-func generateHTMLFile(article domain.Article, directory string) error {
+func generateHTMLFile(article domain.Article) error {
 	content, err := generateHTML(article, domain.ArticleHtmlTemplate)
 	if err != nil {
 		return fmt.Errorf("error generating html file content: %w", err)
 	}
 
-	if err := os.WriteFile(article.HtmlFilePath(directory), []byte(content), 0644); err != nil {
+	if err := os.WriteFile(article.StorageFilePath(domain.ArticleDebugFolder), []byte(content), 0644); err != nil {
 		return fmt.Errorf("error creating html file: %w", err)
 	}
 	return nil
