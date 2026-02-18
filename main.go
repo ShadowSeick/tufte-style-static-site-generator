@@ -6,11 +6,13 @@ import (
 	"fmt"
 	"io/fs"
 	"log"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/ShadowSeick/tufte-style-static-site-generator/domain"
 	"github.com/ShadowSeick/tufte-style-static-site-generator/internal/bunny"
 	"github.com/ShadowSeick/tufte-style-static-site-generator/pkg/flags"
 )
@@ -20,22 +22,21 @@ func main() {
 	flags.Init()
 	
 	// Build Articles
-	blogPath, err := filepath.Abs(ArticleFolder)
+	blogPath, err := filepath.Abs(domain.ArticleFolder)
 	if err != nil {
 		fmt.Println("error getting working directory: %w", err)
 		return
 	}
 
-	var englishArticles []Article
-	var spanishArticles []Article
-	var articleLanguage Language
+	articles := make(map[domain.Language][]domain.Article)
+	var articleLanguage domain.Language
 	err = filepath.WalkDir(blogPath, func(path string, info fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 
 		baseName := info.Name()
-		if baseName == ArticleFolder {
+		if baseName == domain.ArticleFolder {
 			return nil
 		}
 
@@ -48,7 +49,7 @@ func main() {
 			if err != nil {
 				return fmt.Errorf("error getting directory info: %w", err)
 			}
-			language, err := ParseLanguage(dirInfo.Name())
+			language, err := domain.ParseLanguage(dirInfo.Name())
 			if err != nil {
 				return fmt.Errorf("error parsing language: %w", err)
 			}
@@ -60,18 +61,12 @@ func main() {
 		if err != nil {
 			return fmt.Errorf("error getting directory info: %w", err)
 		}
-		article, err := NewArticle(articleLanguage, fileInfo.Name())
+		article, err := domain.NewArticle(articleLanguage, fileInfo.Name())
 		if err != nil {
 			return fmt.Errorf("error creating new article: %w", err)
 		}
 
-		switch articleLanguage {
-		case English:
-			englishArticles = append(englishArticles, article)
-		case Spanish:
-			spanishArticles = append(spanishArticles, article)
-		}
-
+		articles[articleLanguage] = append(articles[articleLanguage], article)
 		return nil
 	})
 	if err != nil {
@@ -80,34 +75,24 @@ func main() {
 	}
 
 	if !flags.IsSet(flags.Debug) {
+
 		bunny.Init()
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 		defer cancel()
 
-		var englishFiles []bunny.File
-		var spanishFiles []bunny.File
-		for i := range LanguageCount {
-			files, err := bunny.GetFile(ctx, fmt.Sprintf("%s/%s/", ArticleFolder, i.String()))
+		uploadedFiles := make(map[domain.Language][]bunny.File)
+		for i := range domain.LanguageCount {
+			files, err := bunny.GetFile(ctx, fmt.Sprintf("%s/%s/", domain.ArticleFolder, i.String()))
 			if err != nil {
 				fmt.Println("error while getting file", err)
 				return
 			}
 
-			switch i {
-			case English:
-				englishFiles =	files
-			case Spanish:
-				spanishFiles = files
-			}
+			uploadedFiles[i] = files
 		}
 
-		if err := UploadArticles(ctx, englishArticles, englishFiles); err != nil {
-			fmt.Println(err)
-			return
-		}
-
-		if err := UploadArticles(ctx, spanishArticles, spanishFiles); err != nil {
+		if err := uploadArticles(ctx, articles, uploadedFiles); err != nil {
 			fmt.Println(err)
 			return
 		}
@@ -117,56 +102,62 @@ func main() {
 	
 	// Debug
 	if flags.IsSet(flags.Debug) {
-		if err := os.Mkdir("./debug", 0666); err != nil && !os.IsExist(err) {
-			log.Fatalf("error creating directory")
+		if err := os.MkdirAll("./debug/en/", 0777); err != nil && !os.IsExist(err) {
+			log.Fatalf("error creating english articles directory")
 		}
 
-		if err := GenerateHTMLFiles(englishArticles, "debug"); err != nil {
+		if err := os.MkdirAll("./debug/es/", 0777); err != nil && !os.IsExist(err) {
+			log.Fatalf("error creating spanish articles directory")
+		}
+
+		if err := generateHTMLFile(articles, domain.ArticleDebugFolder); err != nil {
 			log.Fatal(err)
 		}
 
-		if err := GenerateHTMLFiles(spanishArticles, "debug"); err != nil {
+		ctx, cancel := context.WithCancel(context.Background())
+		listenToArticleChanges(articles, cancel)
+		go regenerateHTMLFiles(ctx, articles)
+
+		// Run server
+		fs := http.FileServer(http.Dir(domain.ArticleDebugFolder))
+		http.Handle("/", fs)
+
+		log.Print("Listening on :3000...")
+		err := http.ListenAndServe(":3000", nil)
+		if err != nil {
 			log.Fatal(err)
 		}
 	}
 }
 
-func GenerateHTMLFiles(articles []Article, directory string) error {
-	for _, article := range articles {
-		content, err := GenerateHTML(article, ArticleHtmlTemplate)
-		if err != nil {
-			return fmt.Errorf("error generating html file content: %w", err)
-		}
 
-		if err := os.WriteFile(article.HtmlFilePath(directory), []byte(content), 0644); err != nil {
-			return fmt.Errorf("error creating html file: %w", err)
-		}
-	}
-	return nil
-}
 
-func UploadArticles(ctx context.Context, articles []Article, uploadedFiles []bunny.File) error {
-	for _, article := range articles {
-		content, err := GenerateHTML(article, ArticleHtmlTemplate)
-		if err != nil {
-			return fmt.Errorf("error generating html file content: %w", err)
-		}
-		checksum := strings.ToUpper(fmt.Sprintf("%x", sha256.Sum256([]byte(content))))
-
-		var hasBeenUploaded bool
-		for _, file := range uploadedFiles {
-			if file.Checksum != nil && *file.Checksum == checksum {
-				hasBeenUploaded = true
-				break
+func uploadArticles(ctx context.Context, articlesByLanguage map[domain.Language][]domain.Article, uploadedFiles map[domain.Language][]bunny.File) error {
+	for _, articles := range articlesByLanguage {
+		for _, article :=	range articles {
+			content, err := generateHTML(article, domain.ArticleHtmlTemplate)
+			if err != nil {
+				return fmt.Errorf("error generating html file content: %w", err)
 			}
-		}
+			checksum := strings.ToUpper(fmt.Sprintf("%x", sha256.Sum256([]byte(content))))
 
-		if !hasBeenUploaded {
-			fmt.Println("uploading file...", article.Title())
-			if err := bunny.UploadFile(ctx, article.StorageFilePath(), checksum, []byte(content)); err != nil {
-				fmt.Println("error uploading file", err)
-				return fmt.Errorf("error updating file: %w", err)
+			var hasBeenUploaded bool
+
+			files := uploadedFiles[articel.Language]
+			for _, file := range files {
+				if file.Checksum != nil && *file.Checksum == checksum {
+					hasBeenUploaded = true
+					break
+				}
 			}
+
+			if !hasBeenUploaded {
+				fmt.Println("uploading file...", article.Title())
+				if err := bunny.UploadFile(ctx, article.StorageFilePath(), checksum, []byte(content)); err != nil {
+					fmt.Println("error uploading file", err)
+					return fmt.Errorf("error updating file: %w", err)
+				}
+			}	
 		}
 	}
 	return nil

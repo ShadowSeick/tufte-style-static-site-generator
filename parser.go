@@ -8,6 +8,8 @@ import (
 	"bufio"
 	"io/fs"
 	"fmt"
+
+	"github.com/ShadowSeick/tufte-style-static-site-generator/domain"
 )
 
 type State uint8
@@ -19,13 +21,13 @@ const (
 	StateCount
 )
 
-var parseOrder = []MarkdownElement{Italic, Bold, InlineCode, Link, SideNote, MarginNote}
+var parseOrder = []domain.MarkdownElement{domain.Italic, domain.Bold, domain.InlineCode, domain.Link, domain.SideNote, domain.MarginNote}
 func ParseLine(line string) (string, State) {
 	if line == "" {
 		return "", InsideSection
 	}
 
-	result, match := Header.Html(line)
+	result, match := domain.Header.Html(line)
 	if match {
 		headerNumber := strings.Count(string(line), "#")
 
@@ -42,12 +44,12 @@ func ParseLine(line string) (string, State) {
 		return result, state
 	}
 
-	result, match = Subheader.Html(line)
+	result, match = domain.Subheader.Html(line)
 	if match {
 		return result, Title
 	}
 
-	result, match = Code.Html(line)
+	result, match = domain.Code.Html(line)
 	if match {
 		return result, InsideSection
 	}
@@ -57,18 +59,18 @@ func ParseLine(line string) (string, State) {
 		result, _ = markdownEl.Html(result)
 	}
 
-	result, match = Image.Html(result)
+	result, match = domain.Image.Html(result)
 	if match {
 		return result, InsideSection
 	}
 
-	result, _ = Paragraph.Html(result)
+	result, _ = domain.Paragraph.Html(result)
 
 	return result, InsideSection
 }
 
 // Maybe this should be done directly passing the article
-func GenerateHTML(article Article, template string) (string, error) {
+func generateHTML(article domain.Article, template string) (string, error) {
 	file, err := os.OpenFile(article.FilePath(), os.O_RDONLY, fs.ModeDevice)
 	if err != nil {
 		fmt.Println("error opening the file: %w", err)

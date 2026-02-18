@@ -56,6 +56,7 @@ func GetFile(ctx context.Context, path string) ([]File, error) {
 	}
 
 	var files []File
+	fmt.Println(string(body))
 	if err := json.Unmarshal(body, &files); err != nil {
 		var httpError HTTPError
 		if subErr := json.Unmarshal(body, &httpError); subErr != nil {
@@ -86,5 +87,6 @@ func UploadFile(ctx context.Context, path string, checksum string, data []byte) 
 		}
 		return fmt.Errorf("error sending request:\n httpCode: %d\n message: %s", httpError.Code, httpError.Message)
 	}
+	fmt.Println(string(body))
 	return nil
 }

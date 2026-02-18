@@ -1,4 +1,4 @@
-package main
+package domain
 
 import (
 	"errors"
@@ -13,6 +13,7 @@ var (
 
 const (
   ArticleFolder = "articles"
+	ArticleDebugFolder = "debug"
 	ArticleHtmlTemplate = `
 	<!DOCTYPE html>
 	<html>
@@ -35,12 +36,12 @@ const (
 
 
 type Article struct {
-	name string
-	language Language
+	Name string
+	Language Language
 }
 
 func (a *Article) FilePath() string {
-	path, err := filepath.Abs(filepath.Join(ArticleFolder, a.language.String(), a.name))
+	path, err := filepath.Abs(filepath.Join(ArticleFolder, a.Language.String(), a.Name))
 	if err != nil {
 		panic("invalid filepath")
 	}
@@ -48,11 +49,11 @@ func (a *Article) FilePath() string {
 }
 
 func (a *Article) StorageFilePath() string {
-	return fmt.Sprintf("%s/%s/%s.%s", ArticleFolder, a.language, a.name, HTML.String())
+	return fmt.Sprintf("%s/%s/%s.%s", ArticleFolder, a.Language, a.Name, HTML.String())
 }
 
 func (a *Article) Title() string {
-	name := strings.Join(strings.Split(a.name, "-"), " ")
+	name := strings.Join(strings.Split(a.Name, "-"), " ")
 	if len(name) == 0 {
 		panic("article name should be at least 1 character long")
 	}
@@ -66,11 +67,11 @@ func NewArticle(language Language, fileBaseName string) (Article, error) {
 		return article, fmt.Errorf("invalid article name: %s", fileBaseName)
 	}
 
-	article.name = baseName[0]
-	article.language = language
+	article.Name = baseName[0]
+	article.Language = language
 	return article, nil
 }
 
 func (a *Article) HtmlFilePath(tempDirPath string) string {
-	return fmt.Sprintf("%s-%s.%s", filepath.Join(tempDirPath, a.name), a.language, HTML.String())
+	return fmt.Sprintf("%s-%s.%s", filepath.Join(tempDirPath, a.Name), a.Language, HTML.String())
 }
