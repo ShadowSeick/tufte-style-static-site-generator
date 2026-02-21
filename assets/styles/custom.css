@@ -1,0 +1,165 @@
+
+/* =========================================================
+   nerdwithamouth.com — Calm Cosmic Tufte Theme
+
+   3 Colors is all you need
+   ========================================================= */
+
+/* --------------------------
+   LIGHT MODE (default)
+-------------------------- */
+
+:root {
+  --accent: #6E5AA3;
+  --text: #1C1A2E;
+  --bg: #E9E7F4;
+}
+
+
+/* --------------------------
+   DARK MODE
+-------------------------- */
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --accent: #9C8BC8;
+    --text: #E3E1F0;
+    --bg: #1C192A;
+  }
+}
+
+
+/* --------------------------
+   BASE
+-------------------------- */
+
+body {
+  background-color: var(--bg);
+  color: var(--text);
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+/* --------------------------
+   HEADERS
+-------------------------- */
+
+h1, h2, h3 {
+  color: var(--accent);
+  letter-spacing: 0.03em;
+}
+
+/* --------------------------
+   LINKS
+-------------------------- */
+
+a, a:link {
+  text-decoration: none;
+  color: var(--accent);
+}
+
+a:visited {
+  text-decoration: underline;
+  text-decoration-thickness: 0.06em;
+  color: var(--accent);
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+
+
+/* --------------------------
+   Custom modifications
+-------------------------- */
+* {
+  margin: 0;
+  padding: 0;
+}
+
+article {
+  padding: 0;
+}
+
+#articles-info, #contact-info, #projects-info {
+  color: var(--text);
+  margin: 0.67em 0 8px 0;
+}
+
+header {
+  margin: 2em 0;
+}
+
+ul.articles {
+  li:first-child {
+    margin-top: 1.5em;
+  }
+
+  li {
+    list-style-type: none;
+    margin: 1em 0;
+    h3 {
+      margin: 8px 0;
+      font-style: normal;
+    }
+
+    p {
+      margin: 8px 0;
+    }
+  }
+}
+
+#logo {
+  font-size: 2.5em;
+  font-weight: 400;
+  line-height: 1.5;
+  margin-bottom: 8px;
+}
+
+.white {
+  color: var(--text)
+}
+
+.menu {
+  font-size: 1.5em;
+
+  li {
+    list-style-type: none;
+    display: inline;
+    color: #ccc;
+  }
+
+  li:not(:first-child):before {
+    padding: 0.5em;
+    content: "| ";
+    color: #ccc;
+  }
+} 
+
+.nwm-table {
+  max-width: 800px;
+  margin: 0 0 0.5em;
+  padding: 0;
+  text-align: justify;
+
+  tbody {
+    margin: 0;
+
+    tr {
+      line-height: 1.1;
+      vertical-align: top;
+
+      td:first-child {
+        text-align: right;
+        padding-right: 0.75em;
+      }
+    }
+  }
+
+  p {
+    font-size: 1.3em;
+    line-height: 1.5em;
+    margin: 0;
+  }
+}
+

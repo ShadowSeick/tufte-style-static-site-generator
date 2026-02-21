@@ -2,15 +2,12 @@ package main
 
 import (
 	"context"
-	"crypto/sha256"
 	"fmt"
 	"io/fs"
 	"path/filepath"
-	"strings"
-	"time"
+	"slices"
 
 	"github.com/ShadowSeick/tufte-style-static-site-generator/domain"
-	"github.com/ShadowSeick/tufte-style-static-site-generator/internal/bunny"
 	"github.com/ShadowSeick/tufte-style-static-site-generator/pkg/flags"
 )
 
@@ -19,13 +16,13 @@ func main() {
 	flags.Init()
 	
 	// Build Articles
-	blogPath, err := filepath.Abs(domain.ArticleFolder)
+	blogPath, err := filepath.Abs(domain.Article.LocalDirectory())
 	if err != nil {
 		fmt.Println("error getting working directory: %w", err)
 		return
 	}
 
-	articles := make(map[domain.Language][]domain.Article)
+	articles := make(map[domain.Language][]domain.File)
 	var articleLanguage domain.Language
 	err = filepath.WalkDir(blogPath, func(path string, info fs.DirEntry, err error) error {
 		if err != nil {
@@ -33,7 +30,7 @@ func main() {
 		}
 
 		baseName := info.Name()
-		if baseName == domain.ArticleFolder {
+		if baseName == domain.Article.LocalDirectory() {
 			return nil
 		}
 
@@ -58,10 +55,17 @@ func main() {
 		if err != nil {
 			return fmt.Errorf("error getting directory info: %w", err)
 		}
-		article, err := domain.NewArticle(articleLanguage, fileInfo.Name())
+
+		article, err := domain.NewFile(articleLanguage, fileInfo.Name(), domain.Article)
 		if err != nil {
 			return fmt.Errorf("error creating new article: %w", err)
 		}
+
+		content, err := generateArticleHtml(article, domain.ArticleTemplate.String())
+		if err != nil {
+			return fmt.Errorf("error generating html file content: %w", err)
+		}
+		article.Content = content
 
 		articles[articleLanguage] = append(articles[articleLanguage], article)
 		return nil
@@ -71,67 +75,29 @@ func main() {
 		return
 	}
 
+	// Order in Most recent first
+	for i := range domain.LanguageCount {
+		slices.Reverse(articles[i])
+	}
+
+	fmt.Println(articles)
+	// I need to add the spanish version though
+	// Think of a way to create the content for the specified file. I think the best way is just to pass the file and that's it. We already have the file type in it
+	index := domain.NewFile(domain.English, "index.html", domain.Index)
+	index.Content = fmt.Sprintf(domain.HomePage.String(), generateIndexHtml(articles, projects))
+
+	articlesIndex := domain.NewFile(domain.English, "index.html", domain.Article)
+	articlesIndex.Content := fmt.Sprintf(domain.ArticlesPage.String(), domain.Navbar.String(), generateArticlesIndexHtml(articles))
+
+	files := append(articles, index, articlesIndex)
+
+	// Upload
 	if !flags.IsSet(flags.Debug) {
-
-		bunny.Init()
-
-		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
-		defer cancel()
-
-		uploadedFiles := make(map[domain.Language][]bunny.File)
-		for i := range domain.LanguageCount {
-			files, err := bunny.GetFile(ctx, fmt.Sprintf("%s/%s/", domain.ArticleFolder, i.String()))
-			if err != nil {
-				fmt.Println("error while getting file", err)
-				return
-			}
-
-			uploadedFiles[i] = files
-		}
-
-		if err := uploadArticles(ctx, articles, uploadedFiles); err != nil {
-			fmt.Println(err)
-			return
-		}
-
-		fmt.Println("Finished uploading articles")
+		InitUpload(context.Background(), files)
 	}
 	
 	// Debug
-	if flags.IsSet(flags.Debug) {
-		InitDebug(context.Background(), articles)
-	}
-}
-
-
-
-func uploadArticles(ctx context.Context, articlesByLanguage map[domain.Language][]domain.Article, uploadedFiles map[domain.Language][]bunny.File) error {
-	for _, articles := range articlesByLanguage {
-		for _, article :=	range articles {
-			content, err := generateHTML(article, domain.ArticleHtmlTemplate)
-			if err != nil {
-				return fmt.Errorf("error generating html file content: %w", err)
-			}
-			checksum := strings.ToUpper(fmt.Sprintf("%x", sha256.Sum256([]byte(content))))
-
-			var hasBeenUploaded bool
-
-			files := uploadedFiles[article.Language]
-			for _, file := range files {
-				if file.Checksum != nil && *file.Checksum == checksum {
-					hasBeenUploaded = true
-					break
-				}
-			}
-
-			if !hasBeenUploaded {
-				fmt.Println("uploading file...", article.Title())
-				if err := bunny.UploadFile(ctx, article.StorageFilePath(domain.ArticleFolder), checksum, []byte(content)); err != nil {
-					fmt.Println("error uploading file", err)
-					return fmt.Errorf("error updating file: %w", err)
-				}
-			}	
-		}
-	}
-	return nil
+	// if flags.IsSet(flags.Debug) {
+	// 	InitDebug(context.Background(), files, domain.PublicProjects)
+	// }
 }

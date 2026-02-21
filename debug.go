@@ -13,39 +13,41 @@ import (
 	"github.com/ShadowSeick/tufte-style-static-site-generator/domain"
 )
 
-type articleChanged struct {
-	index int
-	language domain.Language
-}
-
 var (
-	changesChannel = make(chan articleChanged)
+	changesChannel = make(chan int)
 	initialize sync.Once
+	debugDirectories = []string{
+		"debug/en",
+		"debug/es",
+		"debug/articles/en",
+		"debug/articles/es",
+	}
 )
 
-func InitDebug(ctx context.Context, articlesByLanguage map[domain.Language][]domain.Article) {
+func InitDebug(ctx context.Context, files []domain.File) {
 	initialize.Do(func() {
+		// Create directories for files
 		cwd, _ := os.Getwd()
-		if err := os.MkdirAll(filepath.Join(cwd, domain.ArticleDebugFolder, domain.English.String()), 0755); err != nil && !os.IsExist(err) {
-			log.Fatalf("error creating english articles directory %v", err)
-		}
-
-		if err := os.MkdirAll(filepath.Join(cwd, domain.ArticleDebugFolder, domain.Spanish.String()), 0755); err != nil && !os.IsExist(err) {
-			log.Fatalf("error creating spanish articles directory")
+		for _, dir := range debugDirectories {
+			if err := os.MkdirAll(filepath.Join(cwd, dir), 0755); err != nil && !os.IsExist(err) {
+				log.Fatalf("error creating directory %s: %w", dir, err)
+			}
 		}
 
 		newCtx, cancel := context.WithCancel(ctx)
 		var wg sync.WaitGroup
-		for _, articles := range articlesByLanguage {
-			for index, article := range articles {
-				if err := generateHTMLFile(article); err != nil {
-					log.Fatal(err)
+		for index, file := range files {
+			if err := os.WriteFile(file.DebugFilePath(), []byte(file.Content), 0644); err != nil {
+				log.Fatalf("error creating html file: %w", err)
+
+				if file.Type != domain.Article {
+					continue
 				}
 
 				// Hot reload articles
 				wg.Go(func () {
 					defer wg.Done()
-					listenToArticleChanges(newCtx, index, article, cancel)
+					listenToArticleChanges(newCtx, index, file, cancel)
 				})
 
 				wg.Go(func () {
@@ -55,13 +57,13 @@ func InitDebug(ctx context.Context, articlesByLanguage map[domain.Language][]dom
 			}
 		}
 
-		go regenerateHTMLFiles(ctx, articlesByLanguage)
+		go regenerateHTMLFiles(ctx, files)
 
 		// Run server
 		mux := http.NewServeMux()
 
-		articles := http.FileServer(http.Dir(domain.ArticleDebugFolder))
-		mux.Handle("/articles/", http.StripPrefix("/articles/", articles))
+		page := http.FileServer(http.Dir(domain.Index.DebugDirectory()))
+		mux.Handle("/", articles)
 
 		assets := http.FileServer(http.Dir("assets"))
 		mux.Handle("/assets/", http.StripPrefix("/assets/", assets))
@@ -72,27 +74,27 @@ func InitDebug(ctx context.Context, articlesByLanguage map[domain.Language][]dom
 	})
 }
 
-func regenerateHTMLFiles(ctx context.Context, articlesByLanguage map[domain.Language][]domain.Article) {
+func regenerateHTMLFiles(ctx context.Context, files []domain.File) {
 	for {
 		select {
 		case <-ctx.Done():
 			fmt.Println("gracefully shutting down")
 			return
-		case article, ok := <-changesChannel:
+		case articleIndex, ok := <-changesChannel:
 			if !ok { // Channel closed
 				return
 			}
 
-			if err := generateHTMLFile(articlesByLanguage[article.language][article.index]); err != nil {
-				fmt.Println("error regenerating html file", articlesByLanguage[article.language][article.index].Name, err)
+			if err := generateHTMLFile(files[articleIndex]); err != nil {
+				fmt.Println("error regenerating html file", files[articleIndex].Name, err)
 				return
 			}
 		}
 	}
 }
 
-func listenToArticleChanges(ctx context.Context, index int, article domain.Article, cancel context.CancelFunc) {
-	filepath := article.FilePath()
+func listenToArticleChanges(ctx context.Context, index int, file domain.File, cancel context.CancelFunc) {
+	filepath := file.LocalFilePath()
 	currStat, err := os.Stat(filepath)
 	if err != nil {
 		fmt.Println("error has occurred when listening to file stat", filepath, err)
@@ -105,7 +107,7 @@ func listenToArticleChanges(ctx context.Context, index int, article domain.Artic
 	for {
 		select {
 		case <-ctx.Done():
-			fmt.Println("gracefully shuttinwdown listening to article: ", article.Name)
+			fmt.Println("gracefully shuttinwdown listening to article: ", file.Title())
 			return
 		case <-ticker.C:
 			stat, err := os.Stat(filepath)
@@ -117,23 +119,8 @@ func listenToArticleChanges(ctx context.Context, index int, article domain.Artic
 
 			if stat.Size() != currStat.Size() || !stat.ModTime().Equal(currStat.ModTime()) {
 				currStat = stat
-				changesChannel <- articleChanged{
-					index: index,
-					language: article.Language,
-				}
+				changesChannel <- index
 			}
 		}
 	}
-}
-
-func generateHTMLFile(article domain.Article) error {
-	content, err := generateHTML(article, domain.ArticleHtmlTemplate)
-	if err != nil {
-		return fmt.Errorf("error generating html file content: %w", err)
-	}
-
-	if err := os.WriteFile(article.StorageFilePath(domain.ArticleDebugFolder), []byte(content), 0644); err != nil {
-		return fmt.Errorf("error creating html file: %w", err)
-	}
-	return nil
 }
