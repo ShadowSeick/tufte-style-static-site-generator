@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"context"
-	"strings"
 	"sync"
 	"time"
 
@@ -20,7 +19,7 @@ func InitUpload(ctx context.Context, files []domain.File) {
 	var wg sync.WaitGroup
 	for _, file := range files {
 		wg.Go(func() {
-			files, err := bunny.GetFile(ctx, file.RemoteFilePath())
+			files, err := bunny.GetFile(newCtx, file.RemoteFilePath())
 			if err != nil {
 				fmt.Println("error while getting file: ", err)
 				return
@@ -37,8 +36,9 @@ func InitUpload(ctx context.Context, files []domain.File) {
 			}
 
 			fmt.Println("uploading file...", file.Title())
-			if err := bunny.UploadFile(ctx, file.RemoteFilePath(), file.Checksum, []byte(file.Content)); err != nil {
-				return fmt.Errorf("error updating file: %w", err)
+			if err := bunny.UploadFile(ctx, file.RemoteFilePath(), file.Checksum(), []byte(file.Content)); err != nil {
+				fmt.Println("error updating file: %w", err)
+				return
 			}
 		})
 	}

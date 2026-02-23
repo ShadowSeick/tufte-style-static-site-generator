@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/ShadowSeick/tufte-style-static-site-generator/domain"
+	"github.com/ShadowSeick/tufte-style-static-site-generator/generate"
 )
 
 var (
@@ -30,7 +31,7 @@ func InitDebug(ctx context.Context, files []domain.File) {
 		cwd, _ := os.Getwd()
 		for _, dir := range debugDirectories {
 			if err := os.MkdirAll(filepath.Join(cwd, dir), 0755); err != nil && !os.IsExist(err) {
-				log.Fatalf("error creating directory %s: %w", dir, err)
+				log.Fatalf("error creating directory %s: %v", dir, err)
 			}
 		}
 
@@ -38,23 +39,24 @@ func InitDebug(ctx context.Context, files []domain.File) {
 		var wg sync.WaitGroup
 		for index, file := range files {
 			if err := os.WriteFile(file.DebugFilePath(), []byte(file.Content), 0644); err != nil {
-				log.Fatalf("error creating html file: %w", err)
-
-				if file.Type != domain.Article {
-					continue
-				}
-
-				// Hot reload articles
-				wg.Go(func () {
-					defer wg.Done()
-					listenToArticleChanges(newCtx, index, file, cancel)
-				})
-
-				wg.Go(func () {
-					defer close(changesChannel)
-					wg.Wait()
-				})
+				fmt.Println("here")
+				log.Fatalf("error creating html file: %v", err)
 			}
+
+			// Only hot reload articles
+			if file.Type != domain.Article {
+				continue
+			}
+
+			wg.Go(func () {
+				defer wg.Done()
+				listenToArticleChanges(newCtx, index, file, cancel)
+			})
+
+			wg.Go(func () {
+				defer close(changesChannel)
+				wg.Wait()
+			})
 		}
 
 		go regenerateHTMLFiles(ctx, files)
@@ -63,11 +65,10 @@ func InitDebug(ctx context.Context, files []domain.File) {
 		mux := http.NewServeMux()
 
 		page := http.FileServer(http.Dir(domain.Index.DebugDirectory()))
-		mux.Handle("/", articles)
+		mux.Handle("/", page)
 
 		assets := http.FileServer(http.Dir("assets"))
 		mux.Handle("/assets/", http.StripPrefix("/assets/", assets))
-
 		
 		log.Print("Listening on :3000...")
 		log.Fatal(http.ListenAndServe(":3000", mux))
@@ -85,9 +86,15 @@ func regenerateHTMLFiles(ctx context.Context, files []domain.File) {
 				return
 			}
 
-			if err := generateHTMLFile(files[articleIndex]); err != nil {
+			content, err := generate.ArticleHtml(files[articleIndex])
+			if err != nil {
 				fmt.Println("error regenerating html file", files[articleIndex].Name, err)
 				return
+			}
+			files[articleIndex].Content = content
+
+			if err := os.WriteFile(files[articleIndex].DebugFilePath(), []byte(files[articleIndex].Content), 0644); err != nil {
+				log.Fatalf("error creating html file: %v", err)
 			}
 		}
 	}

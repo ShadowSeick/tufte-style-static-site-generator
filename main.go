@@ -8,6 +8,7 @@ import (
 	"slices"
 
 	"github.com/ShadowSeick/tufte-style-static-site-generator/domain"
+	"github.com/ShadowSeick/tufte-style-static-site-generator/generate"
 	"github.com/ShadowSeick/tufte-style-static-site-generator/pkg/flags"
 )
 
@@ -61,7 +62,7 @@ func main() {
 			return fmt.Errorf("error creating new article: %w", err)
 		}
 
-		content, err := generateArticleHtml(article, domain.ArticleTemplate.String())
+		content, err := generate.ArticleHtml(article)
 		if err != nil {
 			return fmt.Errorf("error generating html file content: %w", err)
 		}
@@ -71,33 +72,70 @@ func main() {
 		return nil
 	})
 	if err != nil {
-		fmt.Println("error while walking through blog file path: %w", err)
+		fmt.Println("error while walking through blog file path: ", err)
 		return
 	}
 
 	// Order in Most recent first
+	
+	var files []domain.File
 	for i := range domain.LanguageCount {
 		slices.Reverse(articles[i])
+		files = append(files, articles[i]...)
 	}
 
-	fmt.Println(articles)
 	// I need to add the spanish version though
-	// Think of a way to create the content for the specified file. I think the best way is just to pass the file and that's it. We already have the file type in it
-	index := domain.NewFile(domain.English, "index.html", domain.Index)
-	index.Content = fmt.Sprintf(domain.HomePage.String(), generateIndexHtml(articles, projects))
+	// Index page
+	index, err := domain.NewFile(domain.English, "index.html", domain.Index)
+	if err != nil {
+		fmt.Println("error creating new file: ", err)
+		return
+	}
+	// I am not sure if leaving as it is or taking them from somewhere. I think hardcoding them is not a big issue
+	content, err := generate.IndexHtml(articles[domain.English], domain.PublicProjects)
+	if err != nil {
+		fmt.Println("error generating index html: ", err)
+		return
+	}
+	index.Content = content
+	files = append(files, index)
 
-	articlesIndex := domain.NewFile(domain.English, "index.html", domain.Article)
-	articlesIndex.Content := fmt.Sprintf(domain.ArticlesPage.String(), domain.Navbar.String(), generateArticlesIndexHtml(articles))
+	// Articles index page
+	articlesIndex, err := domain.NewFile(domain.English, "index.html", domain.ArticleIndex)
+	if err != nil {
+		fmt.Println("error creating new file: ", err)
+		return
+	}
 
-	files := append(articles, index, articlesIndex)
+	content, err = generate.ArticlesIndexHtml(articles[domain.English])
+	if err != nil {
+		fmt.Println("error generating articles index html: ", err)
+		return
+	}
+	articlesIndex.Content = content
+	files = append(files, articlesIndex)
 
-	// Upload
-	if !flags.IsSet(flags.Debug) {
-		InitUpload(context.Background(), files)
+	// Contact info page
+	contactIndex, err := domain.NewFile(domain.English, "contact.html", domain.ContactIndex)
+	if err != nil {
+		fmt.Println("error creating new file: ", err)
+		return
 	}
 	
-	// Debug
-	// if flags.IsSet(flags.Debug) {
-	// 	InitDebug(context.Background(), files, domain.PublicProjects)
+	contactIndex.Content = generate.ContactIndexHtml()
+	files = append(files, contactIndex)
+
+	for _, file := range files {
+		fmt.Println(file.Title())
+	}
+
+	// Upload
+	// if !flags.IsSet(flags.Debug) {
+	// 	InitUpload(context.Background(), files)
 	// }
+	
+	// Debug
+	if flags.IsSet(flags.Debug) {
+		InitDebug(context.Background(), files)
+	}
 }

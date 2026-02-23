@@ -2,7 +2,6 @@ package domain
 
 import (
 	"crypto/sha256"
-	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -26,7 +25,7 @@ func (f *File) DateString() string {
 
 func (f *File) FullName() string {
 	if date := f.DateString(); date != "" {
-		return fmt.Sprintf("%s_%s", a.DateString(), a.Name)
+		return fmt.Sprintf("%s_%s", f.DateString(), f.Name)
 	}
 	return f.Name
 }
@@ -56,12 +55,23 @@ func (f *File) DebugFilePath() string {
 }
 
 func (f *File) Title() string {
-	name := strings.Join(strings.Split(f.Name, "-"), " ")
-	if len(name) == 0 {
-		panic("article name should be at least 1 character long")
+	switch f.Type {
+	case Article:
+		name := strings.Join(strings.Split(f.Name, "-"), " ")
+		if len(name) == 0 {
+			panic("article name should be at least 1 character long")
+		}
+		return strings.ToUpper(string(name[0])) + name[1:]
+	case Index:
+		return "Nerd with a mouth - Blog"
+	case ArticleIndex:
+		return "Nerd with a mouth - Articles"
+	case ContactIndex:
+		return "Nerd with a mouth - Contact"
+	default:
+		panic("title not handled for file type "+f.Type.String())
 	}
-	return strings.ToUpper(string(name[0])) + name[1:]
-}
+	}
 
 func (f *File) Checksum() string {
 	if f.Content == "" {
@@ -73,6 +83,7 @@ func (f *File) Checksum() string {
 func NewFile(language Language, fileBaseName string, fileType FileType) (File, error) {
 	var file File
 
+	cleanedFileName := fileBaseName
 	switch fileType {
 	case Article:
 		fullName := strings.Split(fileBaseName, "_")
@@ -84,12 +95,12 @@ func NewFile(language Language, fileBaseName string, fileType FileType) (File, e
 		if err != nil {
 			return file, fmt.Errorf("invalid date time: %w", err)
 		}
-		file.Date = date
+		file.Date = &date
 
-		fileBaseName = fullName[1]
+		cleanedFileName = fullName[1]
 	}
 
-	baseName := strings.Split(fullName[1], ".")
+	baseName := strings.Split(cleanedFileName, ".")
 	if len(baseName) != 2 {
 		return file, fmt.Errorf("invalid %s name: %s", fileType.String(), fileBaseName)
 	}
@@ -107,6 +118,7 @@ const (
 	Article FileType = iota
 	Index
 	ArticleIndex
+	ContactIndex
 	Image
 	Gif
 	FileTypeCount
@@ -116,6 +128,7 @@ var fileTypeStrings = [FileTypeCount]string{
 	Article: "article",
 	Index: "home page",
 	ArticleIndex: "articles index page",
+	ContactIndex: "contact info",
 	Image: "image",
 	Gif: "gif",
 }
@@ -131,6 +144,7 @@ var remoteDirectory = [FileTypeCount]string{
 	Article: "articles",
 	Index: "",
 	ArticleIndex: "articles",
+	ContactIndex: "",
 	Image: "assets/images",
 	Gif: "assets/images",
 }
@@ -139,6 +153,7 @@ var localDirectory = [FileTypeCount]string{
 	Article: "articles",
 	Index: "",
 	ArticleIndex: "articles",
+	ContactIndex: "",
 	Image: "assets/images",
 	Gif: "assets/images",
 }
@@ -147,6 +162,7 @@ var debugDirectory = [FileTypeCount]string{
 	Article: "debug/articles",
 	Index: "debug",
 	ArticleIndex: "debug/articles",
+	ContactIndex: "debug",
 	Image: "assets/images",
 	Gif: "assets/images",
 }

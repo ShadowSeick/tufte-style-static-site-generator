@@ -1,4 +1,4 @@
-package domain
+package generate
 
 type HTMLElement uint8
 
@@ -36,8 +36,8 @@ type HTMLPart uint8
 const (
 	HomePage HTMLPart = iota
 	ArticlesPage
+	ContactPage
   Navbar
-	ContactInfo
 	ProjectsInfo
 	ArticlesInfo
 	ArticleTemplate
@@ -75,34 +75,48 @@ var htmlPartStrings = [HTMLCount]string {
 	</ul>
 	</body>
 </html>`,
+	ContactPage: `<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Nerd with a mouth - Contact Information</title>
+    <link rel="stylesheet" href="/assets/styles/tufte.css"/>
+    <link rel="stylesheet" href="/assets/styles/custom.css"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+  </head>
+	<body>
+	%s
+	<h1 id="contact-info">Contact Information</h1>
+	<table class="nwm-table">
+		<tbody>
+			<tr>
+				<td>Email:</td>
+				<td><a href="mailto:alcolka@gmail.com">adrian<em>[at]</em>nerdwithamouth<em>[dot]</em>com</a></td>
+			</tr>
+			<tr>
+				<td>Github:</td>
+				<td><a href="https://github.com/ShadowSeick">github.com/ShadowSeick</a></td>
+			</tr>
+			<tr>
+				<td>Linkedin:</td>
+				<td><a href="https://www.linkedin.com/in/adri%C3%A1n-mu%C3%B1oz-gonz%C3%A1lez-b98669136/">Adrián Muñoz González</a></td>
+			</tr>
+		</tbody>
+	</table>
+	</body>
+</html>`,
 	Navbar: `<header>
 	<nav>
 		<h1 id="logo">
 			<a href="/">Nerd<span class="white">with</span>a<span class="white">mouth</span></a>
 		</h1>
 		<ul class="menu">
-			<li><a href="/articles">Home</a></li>
-			<li><a href="/articles/articles.html">Articles</a></li>
+			<li><a href="/">Home</a></li>
+			<li><a href="/articles/">Articles</a></li>
+			<li><a href="/contact.html">Contact Info</a></li>
 		</ul>
 	</nav>
 </header>`,
-	ContactInfo: `<h2 id="contact-info">Contact info</h2>
-<table class="nwm-table">
-	<tbody>
-		<tr>
-			<td>Email:</td>
-			<td><a href="mailto:alcolka@gmail.com">adrian<em>[at]</em>nerdwithamouth<em>[dot]</em>com</a></td>
-		</tr>
-		<tr>
-			<td>Github:</td>
-			<td><a href="https://github.com/ShadowSeick">github.com/ShadowSeick</a></td>
-		</tr>
-		<tr>
-			<td>Linkedin:</td>
-			<td><a href="https://www.linkedin.com/in/adri%C3%A1n-mu%C3%B1oz-gonz%C3%A1lez-b98669136/">Adrián Muñoz González</a></td>
-		</tr>
-	</tbody>
-</table>`,
 	ProjectsInfo: `<h2 id="projects-info">Projects</h2><table class="nwm-table"><tbody>%s</tbody></table>`,
 	ArticlesInfo:  `<h2 id="articles-info">Articles</h2><ul class="articles">%s</ul>`,
 	ArticleTemplate: `<!DOCTYPE html>
