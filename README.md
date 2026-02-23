@@ -14,13 +14,17 @@ The program walks through the blog folder. In it, there are different folders co
 - HTML files will be uploaded to: */{article folder name}/{file language}*
 
 ## TODO
+- [IN PROGRESS] Update the correct files in the correct places
+- Clean folders with dummy articles
+- Make the proper translations for the pages
 - Create github actions to execute this when merged into main
+- Finish HTTP article and publish it
 - Update templates to show some meta information like the image and so forth when the link is shared
 
 ## Implemention
 I have tried with 2 ways:
 - Regexp. It was the simplest and the most naive approach. It was useful for my needs, but after it all worked, I researched for proper parsing implementations.
-- Naive Pratt parsing like. It is searching for strings and tokens. I tried first this implementation, with no idea I was doing it, but it seemed complicated so I opted for something that worked fast. After seeing others solutions, I realize it was not that difficult and gone with this. Of course I am not following Pratt parsing as a whole, but trying to do a tokenizer like.
+- [This would be ideal] Naive Pratt parsing like. It is searching for strings and tokens. I tried first this implementation, with no idea I was doing it, but it seemed complicated so I opted for something that worked fast. After seeing others solutions, I realize it was not that difficult and gone with this. Of course I am not following Pratt parsing as a whole, but trying to do a tokenizer like.
 
 ## Webpage
 As it is a static website, I went with a CDN, exactly [Bunny CDN](bunny.net) for all the blog, images and scripts. Why? It's the cheapest and it does not play with you after a while like cloudflare and apparently it's really well regarded in the community. Besides, it was a really pleasant experience to use and port the domain and use the storage. It has all the tools I need and again it's freakingly cheap.
