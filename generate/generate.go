@@ -77,11 +77,11 @@ func ArticleHtml(file domain.File) (string, error) {
 	}
 	html.WriteString("</section>")
 
-	return fmt.Sprintf(ArticlesPage.String(), file.Title(), Navbar.String(), html.String()), nil
+	return fmt.Sprintf(ArticleTemplate.String(file.Language), file.Title(), Navbar.String(file.Language), html.String()), nil
 }
 
 // This is comboluted, I don't like it. This would be much simpler with a strings builder from scratch
-func IndexHtml(files []domain.File, projects []domain.Project) (string, error) {
+func IndexHtml(language domain.Language, files []domain.File, projects []domain.Project) (string, error) {
 	for _, file := range files {
 		if file.Type != domain.Article {
 			return "", fmt.Errorf("wrong file type: index only accepts article files")
@@ -89,7 +89,7 @@ func IndexHtml(files []domain.File, projects []domain.Project) (string, error) {
 	}
 
 	var html strings.Builder
-	html.WriteString(Navbar.String())
+	html.WriteString(Navbar.String(language))
 
 	var projectsInfo string
 	for _, project := range projects {
@@ -97,7 +97,7 @@ func IndexHtml(files []domain.File, projects []domain.Project) (string, error) {
 		projectRow += fmt.Sprintf(Td.String(), fmt.Sprintf(P.String(), project.Description))
 		projectsInfo += fmt.Sprintf(Tr.String(), projectRow)
 	}
-	html.WriteString(fmt.Sprintf(ProjectsInfo.String(), projectsInfo))
+	html.WriteString(fmt.Sprintf(ProjectsInfo.String(language), projectsInfo))
 
 	var articlesList string
 	for _, file := range files {
@@ -105,11 +105,11 @@ func IndexHtml(files []domain.File, projects []domain.Project) (string, error) {
 		articleItem += fmt.Sprintf(P.String(), file.DateString())
 		articlesList += fmt.Sprintf(Li.String(), articleItem)
 	}
-	html.WriteString(fmt.Sprintf(ArticlesInfo.String(), articlesList))
-	return fmt.Sprintf(HomePage.String(), html.String()), nil
+	html.WriteString(fmt.Sprintf(ArticlesInfo.String(language), articlesList))
+	return fmt.Sprintf(HomePage.String(language), html.String()), nil
 }
 
-func ArticlesIndexHtml(files []domain.File) (string, error) {
+func ArticlesIndexHtml(language domain.Language, files []domain.File) (string, error) {
 	for _, file := range files {
 		if file.Type != domain.Article {
 			return "", fmt.Errorf("wrong file type: articles index only accepts article files")
@@ -125,9 +125,9 @@ func ArticlesIndexHtml(files []domain.File) (string, error) {
 	}
 
 	html.WriteString(articlesList)
-	return fmt.Sprintf(ArticlesPage.String(), Navbar.String(), html.String()), nil
+	return fmt.Sprintf(ArticlesPage.String(language), Navbar.String(language), html.String()), nil
 }
 
-func ContactIndexHtml() string {
-	return fmt.Sprintf(ContactPage.String(), Navbar.String())
+func ContactIndexHtml(language domain.Language) string {
+	return fmt.Sprintf(ContactPage.String(language), Navbar.String(language))
 }

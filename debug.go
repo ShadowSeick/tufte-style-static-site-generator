@@ -18,10 +18,8 @@ var (
 	changesChannel = make(chan int)
 	initialize sync.Once
 	debugDirectories = []string{
-		"debug/en",
-		"debug/es",
-		"debug/articles/en",
-		"debug/articles/es",
+		"debug/en/articles",
+		"debug/es/articles",
 	}
 )
 
@@ -39,7 +37,6 @@ func InitDebug(ctx context.Context, files []domain.File) {
 		var wg sync.WaitGroup
 		for index, file := range files {
 			if err := os.WriteFile(file.DebugFilePath(), []byte(file.Content), 0644); err != nil {
-				fmt.Println("here")
 				log.Fatalf("error creating html file: %v", err)
 			}
 
@@ -64,7 +61,7 @@ func InitDebug(ctx context.Context, files []domain.File) {
 		// Run server
 		mux := http.NewServeMux()
 
-		page := http.FileServer(http.Dir(domain.Index.DebugDirectory()))
+		page := http.FileServer(http.Dir("debug"))
 		mux.Handle("/", page)
 
 		assets := http.FileServer(http.Dir("assets"))

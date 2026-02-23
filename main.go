@@ -92,7 +92,7 @@ func main() {
 		return
 	}
 	// I am not sure if leaving as it is or taking them from somewhere. I think hardcoding them is not a big issue
-	content, err := generate.IndexHtml(articles[domain.English], domain.PublicProjects)
+	content, err := generate.IndexHtml(domain.English, articles[domain.English], domain.PublicProjects)
 	if err != nil {
 		fmt.Println("error generating index html: ", err)
 		return
@@ -107,7 +107,7 @@ func main() {
 		return
 	}
 
-	content, err = generate.ArticlesIndexHtml(articles[domain.English])
+	content, err = generate.ArticlesIndexHtml(domain.English, articles[domain.English])
 	if err != nil {
 		fmt.Println("error generating articles index html: ", err)
 		return
@@ -122,12 +122,8 @@ func main() {
 		return
 	}
 	
-	contactIndex.Content = generate.ContactIndexHtml()
+	contactIndex.Content = generate.ContactIndexHtml(domain.English)
 	files = append(files, contactIndex)
-
-	for _, file := range files {
-		fmt.Println(file.Title())
-	}
 
 	// Upload
 	// if !flags.IsSet(flags.Debug) {

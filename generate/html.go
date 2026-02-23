@@ -1,5 +1,11 @@
 package generate
 
+import (
+	"fmt"
+
+	"github.com/ShadowSeick/tufte-style-static-site-generator/domain"
+)
+
 type HTMLElement uint8
 
 const (
@@ -86,7 +92,7 @@ var htmlPartStrings = [HTMLCount]string {
   </head>
 	<body>
 	%s
-	<h1 id="contact-info">Contact Information</h1>
+	<h2 id="contact-info">Contact Information</h2>
 	<table class="nwm-table">
 		<tbody>
 			<tr>
@@ -95,11 +101,11 @@ var htmlPartStrings = [HTMLCount]string {
 			</tr>
 			<tr>
 				<td>Github:</td>
-				<td><a href="https://github.com/ShadowSeick">github.com/ShadowSeick</a></td>
+				<td><a target="_blank" href="https://github.com/ShadowSeick">github.com/ShadowSeick</a></td>
 			</tr>
 			<tr>
 				<td>Linkedin:</td>
-				<td><a href="https://www.linkedin.com/in/adri%C3%A1n-mu%C3%B1oz-gonz%C3%A1lez-b98669136/">Adrián Muñoz González</a></td>
+				<td><a target="_blank" href="https://linkedin.com/in/adrián-muñoz-gonzález-b98669136/">Adrián Muñoz González</a></td>
 			</tr>
 		</tbody>
 	</table>
@@ -108,12 +114,12 @@ var htmlPartStrings = [HTMLCount]string {
 	Navbar: `<header>
 	<nav>
 		<h1 id="logo">
-			<a href="/">Nerd<span class="white">with</span>a<span class="white">mouth</span></a>
+			<a href="/%s/">Nerd<span class="white">With</span>A<span class="white">Mouth</span></a>
 		</h1>
 		<ul class="menu">
-			<li><a href="/">Home</a></li>
-			<li><a href="/articles/">Articles</a></li>
-			<li><a href="/contact.html">Contact Info</a></li>
+			<li><a href="/%s/">Home</a></li>
+			<li><a href="/%s/articles/">Articles</a></li>
+			<li><a href="/%s/contact.html">Contact Info</a></li>
 		</ul>
 	</nav>
 </header>`,
@@ -139,9 +145,14 @@ var htmlPartStrings = [HTMLCount]string {
 </html>`,
 }
 
-func (html HTMLPart) String() string {
+func (html HTMLPart) String(language domain.Language) string {
 	if html >= HTMLCount {
 		panic("invalid html part")
+	}
+	switch html {
+	case Navbar:
+		lang := language.String()
+		return fmt.Sprintf(htmlPartStrings[html], lang, lang, lang, lang)
 	}
 	return htmlPartStrings[html]
 }

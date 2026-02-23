@@ -10,9 +10,10 @@
 -------------------------- */
 
 :root {
-  --accent: #6E5AA3;
-  --text: #1C1A2E;
-  --bg: #E9E7F4;
+  --accent: #7053bb;
+  --text: #000000;
+  --bg: #f4f0f7;
+  font-weight: 800;
 }
 
 
@@ -25,6 +26,7 @@
     --accent: #9C8BC8;
     --text: #E3E1F0;
     --bg: #1C192A;
+    font-weight: normal;
   }
 }
 
@@ -36,7 +38,6 @@
 body {
   background-color: var(--bg);
   color: var(--text);
-  transition: background-color 0.25s ease, color 0.25s ease;
 }
 
 /* --------------------------
@@ -92,7 +93,7 @@ header {
 
 ul.articles {
   li:first-child {
-    margin-top: 1.5em;
+    margin-top: 0.5em;
   }
 
   li {
@@ -134,10 +135,14 @@ ul.articles {
     content: "| ";
     color: #ccc;
   }
-} 
+}
+
+p {
+  text-align: justify;
+}
 
 .nwm-table {
-  max-width: 800px;
+  max-width: 725px;
   margin: 0 0 0.5em;
   padding: 0;
   text-align: justify;
@@ -157,9 +162,15 @@ ul.articles {
   }
 
   p {
-    font-size: 1.3em;
+    font-size: 1.2em;
     line-height: 1.5em;
     margin: 0;
+  }
+}
+
+@media (max-width: 900px) {
+  .nwm-table {
+    max-width: 85%;
   }
 }
 

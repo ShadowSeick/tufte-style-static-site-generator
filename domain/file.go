@@ -39,19 +39,11 @@ func (f *File) LocalFilePath() string {
 }
 
 func (f *File) RemoteFilePath() string {
-	path, err := filepath.Abs(filepath.Join(f.Type.RemoteDirectory(), f.Language.String(), f.FullName()))
-	if err != nil {
-		panic("invalid filepath")
-	}
-	return fmt.Sprintf("%s.%s", path, Markdown.String())
+	return fmt.Sprintf("%s.%s", filepath.Join(f.Language.String(), f.Type.RemoteDirectory(), f.Name), HTML.String())
 }
 
 func (f *File) DebugFilePath() string {
-	path, err := filepath.Abs(filepath.Join(f.Type.DebugDirectory(), f.Language.String(), f.FullName()))
-	if err != nil {
-		panic("invalid filepath")
-	}
-	return fmt.Sprintf("%s.%s", path, Markdown.String())
+	return fmt.Sprintf("%s.%s", filepath.Join(f.Type.DebugDirectory(f.Language), f.Name), HTML.String())
 }
 
 func (f *File) Title() string {
@@ -159,10 +151,10 @@ var localDirectory = [FileTypeCount]string{
 }
 
 var debugDirectory = [FileTypeCount]string{
-	Article: "debug/articles",
-	Index: "debug",
-	ArticleIndex: "debug/articles",
-	ContactIndex: "debug",
+	Article: "debug/%s/articles",
+	Index: "debug/%s",
+	ArticleIndex: "debug/%s/articles",
+	ContactIndex: "debug/%s",
 	Image: "assets/images",
 	Gif: "assets/images",
 }
@@ -181,9 +173,9 @@ func (f FileType) LocalDirectory() string {
 	return localDirectory[f]
 }
 
-func (f FileType) DebugDirectory() string {
+func (f FileType) DebugDirectory(language Language) string {
 if f >= FileTypeCount {
 		panic("invalid file type")
 	}
-	return debugDirectory[f]
+	return fmt.Sprintf(debugDirectory[f], language.String())
 }
