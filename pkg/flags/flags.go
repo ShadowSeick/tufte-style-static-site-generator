@@ -8,7 +8,7 @@ import (
 
 var (
 	initialize sync.Once
-	flags []Flag
+	flags      []Flag
 )
 
 type Flag uint8

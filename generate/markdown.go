@@ -72,7 +72,7 @@ func (el MarkdownElement) Html(text string) (string, bool) {
 	case SideNote, MarginNote: // This is fucking ugly but it works. Maybe there is a better way to do it
 		var newText strings.Builder
 
-		endIndex := len(text) -1
+		endIndex := len(text) - 1
 		for _, match := range markdownRegexp[el].FindAllStringIndex(text, -1) {
 			// Write until match
 			newText.WriteString(text[:match[0]])
@@ -81,10 +81,10 @@ func (el MarkdownElement) Html(text string) (string, bool) {
 			startIndexID := strings.IndexRune(text[match[0]:match[1]], '@')
 			var id string
 			if startIndexID >= 0 {
-				id = text[startIndexID+match[0]+1:match[1]-1]
+				id = text[startIndexID+match[0]+1 : match[1]-1]
 				fmt.Println("ID:", id)
 			}
-			
+
 			// Get Balanced parenthesis
 			startParenthesis := match[1] + 1
 			endParenthesis := len(text) - 1
@@ -106,17 +106,17 @@ func (el MarkdownElement) Html(text string) (string, bool) {
 			endIndex = endParenthesis
 		}
 
-		if endIndex != len(text) -1 {
+		if endIndex != len(text)-1 {
 			newText.WriteString(text[endIndex+1:])
 		}
-		
+
 		result = newText.String()
 	case Image:
 		result = fmt.Sprintf("<figure>%s</figure>", markdownRegexp[Image].ReplaceAllString(text, htmlString[Image]))
 	case Paragraph:
 		result = fmt.Sprintf(htmlString[el], result)
 	default:
-    result = markdownRegexp[el].ReplaceAllString(text, htmlString[el])
+		result = markdownRegexp[el].ReplaceAllString(text, htmlString[el])
 	}
 
 	return result, true

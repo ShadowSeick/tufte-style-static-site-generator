@@ -25,8 +25,8 @@ var htmlElementString = [HTMLElementCount]string{
 	Tr: "<tr>%s</tr>",
 	Td: "<td>%s</td>",
 	Br: "<br>",
-	A: `<a href="%s">%s</a>`,
-	P: "<p>%s</p>",
+	A:  `<a href="%s">%s</a>`,
+	P:  "<p>%s</p>",
 	H3: "<h3>%s</h3>",
 }
 
@@ -43,14 +43,14 @@ const (
 	HomePage HTMLPart = iota
 	ArticlesPage
 	ContactPage
-  Navbar
+	Navbar
 	ProjectsInfo
 	ArticlesInfo
 	ArticleTemplate
 	HTMLCount
 )
 
-var htmlPartStrings = [HTMLCount]string {
+var htmlPartStrings = [HTMLCount]string{
 	HomePage: `<!DOCTYPE html>
 <html>
   <head>
@@ -124,7 +124,7 @@ var htmlPartStrings = [HTMLCount]string {
 	</nav>
 </header>`,
 	ProjectsInfo: `<h2 id="projects-info">Projects</h2><table class="nwm-table"><tbody>%s</tbody></table>`,
-	ArticlesInfo:  `<h2 id="articles-info">Articles</h2><ul class="articles">%s</ul>`,
+	ArticlesInfo: `<h2 id="articles-info">Articles</h2><ul class="articles">%s</ul>`,
 	ArticleTemplate: `<!DOCTYPE html>
 <html>
 	<head>

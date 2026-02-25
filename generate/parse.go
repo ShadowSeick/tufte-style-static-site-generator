@@ -14,6 +14,7 @@ const (
 )
 
 var parseOrder = []MarkdownElement{Italic, Bold, InlineCode, Link, SideNote, MarginNote}
+
 func parseLine(line string) (string, State) {
 	if line == "" {
 		return "", InsideSection

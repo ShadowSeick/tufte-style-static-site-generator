@@ -40,11 +40,11 @@ func TestHeader(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result, matched := Header.Html(tt.input)
-			
+
 			if matched != tt.shouldMatch {
 				t.Errorf("Expected match=%v, got match=%v", tt.shouldMatch, matched)
 			}
-			
+
 			if tt.shouldMatch && result != tt.expected {
 				t.Errorf("Expected '%s', got '%s'", tt.expected, result)
 			}
@@ -82,11 +82,11 @@ func TestSubheader(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result, matched := Subheader.Html(tt.input)
-			
+
 			if matched != tt.shouldMatch {
 				t.Errorf("Expected match=%v, got match=%v", tt.shouldMatch, matched)
 			}
-			
+
 			if tt.shouldMatch && result != tt.expected {
 				t.Errorf("Expected '%s', got '%s'", tt.expected, result)
 			}
@@ -124,11 +124,11 @@ func TestLink(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result, matched := Link.Html(tt.input)
-			
+
 			if matched != tt.shouldMatch {
 				t.Errorf("Expected match=%v, got match=%v", tt.shouldMatch, matched)
 			}
-			
+
 			if tt.shouldMatch && result != tt.expected {
 				t.Errorf("Expected '%s', got '%s'", tt.expected, result)
 			}
@@ -190,11 +190,11 @@ func TestSideNote(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result, matched := SideNote.Html(tt.input)
-			
+
 			if matched != tt.shouldMatch {
 				t.Errorf("Expected match=%v, got match=%v", tt.shouldMatch, matched)
 			}
-			
+
 			if tt.shouldMatch && result != tt.expected {
 				t.Errorf("Expected '%s', got '%s'", tt.expected, result)
 			}
@@ -256,11 +256,11 @@ func TestMarginNote(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result, matched := MarginNote.Html(tt.input)
-			
+
 			if matched != tt.shouldMatch {
 				t.Errorf("Expected match=%v, got match=%v", tt.shouldMatch, matched)
 			}
-			
+
 			if tt.shouldMatch && result != tt.expected {
 				t.Errorf("Expected '%s', got '%s'", tt.expected, result)
 			}
@@ -279,7 +279,7 @@ func TestCode(t *testing.T) {
 			name:        "Go code block",
 			input:       "```go\nfunc main() {\n  text := 1\n  return text\n}\n```",
 			shouldMatch: true,
-			expected:    `<pre><code class="language-go">func main() {
+			expected: `<pre><code class="language-go">func main() {
   text := 1
   return text
 }
@@ -289,7 +289,7 @@ func TestCode(t *testing.T) {
 			name:        "Python code block",
 			input:       "```python\ndef hello():\n    print('world')\n```",
 			shouldMatch: true,
-			expected:    `<pre><code class="language-python">def hello():
+			expected: `<pre><code class="language-python">def hello():
     print('world')
 </code></pre>`,
 		},
@@ -297,7 +297,7 @@ func TestCode(t *testing.T) {
 			name:        "Code block no language",
 			input:       "```\nsome code\n```",
 			shouldMatch: true,
-			expected:    `<pre><code class="language-">some code
+			expected: `<pre><code class="language-">some code
 </code></pre>`,
 		},
 		{
@@ -311,11 +311,11 @@ func TestCode(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result, matched := Code.Html(tt.input)
-			
+
 			if matched != tt.shouldMatch {
 				t.Errorf("Expected match=%v, got match=%v", tt.shouldMatch, matched)
 			}
-			
+
 			if tt.shouldMatch && result != tt.expected {
 				t.Errorf("Expected '%s', got '%s'", tt.expected, result)
 			}
@@ -334,14 +334,14 @@ func TestInlineCode(t *testing.T) {
 			name:        "Inline code",
 			input:       "Here we have some thing\nUse `fmt.Println()` to print",
 			shouldMatch: true,
-			expected:    `Here we have some thing
+			expected: `Here we have some thing
 Use <code>fmt.Println()</code> to print`,
 		},
 		{
-			name: "Inline real code",
-			input: "Maybe `we are dealing with existing code` and we have to work around it or we need to get out that feature so we cannot focus on what’s really important, data. Most of the time, if we have a good data representation, problems and features become easier to solve and the application becomes simpler and easier to maintain. Technical debt can be done by hurry that feature or not thinking twice about the solution we think is the correct one. It also can be develop by changing the needs of the business. Solutions are a matter of time and space, what was once good could no longer be. Refactors exist for a reason and we should do them from time to time, but sometimes if we spend a little more time thinking on the big picture we could make not so expensive refactors nor making features take longer than should be.",
+			name:        "Inline real code",
+			input:       "Maybe `we are dealing with existing code` and we have to work around it or we need to get out that feature so we cannot focus on what’s really important, data. Most of the time, if we have a good data representation, problems and features become easier to solve and the application becomes simpler and easier to maintain. Technical debt can be done by hurry that feature or not thinking twice about the solution we think is the correct one. It also can be develop by changing the needs of the business. Solutions are a matter of time and space, what was once good could no longer be. Refactors exist for a reason and we should do them from time to time, but sometimes if we spend a little more time thinking on the big picture we could make not so expensive refactors nor making features take longer than should be.",
 			shouldMatch: true,
-			expected: "Maybe <code>we are dealing with existing code</code> and we have to work around it or we need to get out that feature so we cannot focus on what’s really important, data. Most of the time, if we have a good data representation, problems and features become easier to solve and the application becomes simpler and easier to maintain. Technical debt can be done by hurry that feature or not thinking twice about the solution we think is the correct one. It also can be develop by changing the needs of the business. Solutions are a matter of time and space, what was once good could no longer be. Refactors exist for a reason and we should do them from time to time, but sometimes if we spend a little more time thinking on the big picture we could make not so expensive refactors nor making features take longer than should be.",
+			expected:    "Maybe <code>we are dealing with existing code</code> and we have to work around it or we need to get out that feature so we cannot focus on what’s really important, data. Most of the time, if we have a good data representation, problems and features become easier to solve and the application becomes simpler and easier to maintain. Technical debt can be done by hurry that feature or not thinking twice about the solution we think is the correct one. It also can be develop by changing the needs of the business. Solutions are a matter of time and space, what was once good could no longer be. Refactors exist for a reason and we should do them from time to time, but sometimes if we spend a little more time thinking on the big picture we could make not so expensive refactors nor making features take longer than should be.",
 		},
 		{
 			name:        "Multiple inline code",
@@ -360,11 +360,11 @@ Use <code>fmt.Println()</code> to print`,
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result, matched := InlineCode.Html(tt.input)
-			
+
 			if matched != tt.shouldMatch {
 				t.Errorf("Expected match=%v, got match=%v", tt.shouldMatch, matched)
 			}
-			
+
 			if tt.shouldMatch && result != tt.expected {
 				t.Errorf("Expected '%s', got '%s'", tt.expected, result)
 			}
@@ -402,11 +402,11 @@ func TestImage(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result, matched := Image.Html(tt.input)
-			
+
 			if matched != tt.shouldMatch {
 				t.Errorf("Expected match=%v, got match=%v", tt.shouldMatch, matched)
 			}
-			
+
 			if tt.shouldMatch && result != tt.expected {
 				t.Errorf("Expected '%s', got '%s'", tt.expected, result)
 			}
@@ -438,7 +438,7 @@ func TestImageWithMarginNote(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// First process margin notes (since images are already processed in these test inputs)
 			result, _ := Image.Html(tt.input)
-			
+
 			if result != tt.expected {
 				t.Errorf("Expected '%s', got '%s'", tt.expected, result)
 			}
@@ -476,11 +476,11 @@ func TestItalic(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result, matched := Italic.Html(tt.input)
-			
+
 			if matched != tt.shouldMatch {
 				t.Errorf("Expected match=%v, got match=%v", tt.shouldMatch, matched)
 			}
-			
+
 			if tt.shouldMatch && result != tt.expected {
 				t.Errorf("Expected '%s', got '%s'", tt.expected, result)
 			}
@@ -518,11 +518,11 @@ func TestBold(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result, matched := Bold.Html(tt.input)
-			
+
 			if matched != tt.shouldMatch {
 				t.Errorf("Expected match=%v, got match=%v", tt.shouldMatch, matched)
 			}
-			
+
 			if tt.shouldMatch && result != tt.expected {
 				t.Errorf("Expected '%s', got '%s'", tt.expected, result)
 			}
@@ -586,7 +586,7 @@ func TestParagraph(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result, _ := Paragraph.Html(tt.input)
-			
+
 			if result != tt.expected {
 				t.Errorf("Expected '%s', got '%s'", tt.expected, result)
 			}

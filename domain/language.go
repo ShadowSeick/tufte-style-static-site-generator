@@ -4,9 +4,7 @@ import (
 	"errors"
 )
 
-var (
-	ErrInvalidLanguage = errors.New("invalid language")
-)
+var ErrInvalidLanguage = errors.New("invalid language")
 
 type Language uint8
 

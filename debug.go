@@ -2,11 +2,11 @@ package main
 
 import (
 	"context"
-	"path/filepath"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -15,8 +15,8 @@ import (
 )
 
 var (
-	changesChannel = make(chan int)
-	initialize sync.Once
+	changesChannel   = make(chan int)
+	initialize       sync.Once
 	debugDirectories = []string{
 		"debug/en/articles",
 		"debug/es/articles",
@@ -28,7 +28,7 @@ func InitDebug(ctx context.Context, files []domain.File) {
 		// Create directories for files
 		cwd, _ := os.Getwd()
 		for _, dir := range debugDirectories {
-			if err := os.MkdirAll(filepath.Join(cwd, dir), 0755); err != nil && !os.IsExist(err) {
+			if err := os.MkdirAll(filepath.Join(cwd, dir), 0o755); err != nil && !os.IsExist(err) {
 				log.Fatalf("error creating directory %s: %v", dir, err)
 			}
 		}
@@ -36,7 +36,7 @@ func InitDebug(ctx context.Context, files []domain.File) {
 		newCtx, cancel := context.WithCancel(ctx)
 		var wg sync.WaitGroup
 		for index, file := range files {
-			if err := os.WriteFile(file.DebugFilePath(), []byte(file.Content), 0644); err != nil {
+			if err := os.WriteFile(file.DebugFilePath(), []byte(file.Content), 0o644); err != nil {
 				log.Fatalf("error creating html file: %v", err)
 			}
 
@@ -45,12 +45,12 @@ func InitDebug(ctx context.Context, files []domain.File) {
 				continue
 			}
 
-			wg.Go(func () {
+			wg.Go(func() {
 				defer wg.Done()
 				listenToArticleChanges(newCtx, index, file, cancel)
 			})
 
-			wg.Go(func () {
+			wg.Go(func() {
 				defer close(changesChannel)
 				wg.Wait()
 			})
@@ -66,7 +66,7 @@ func InitDebug(ctx context.Context, files []domain.File) {
 
 		assets := http.FileServer(http.Dir("assets"))
 		mux.Handle("/assets/", http.StripPrefix("/assets/", assets))
-		
+
 		log.Print("Listening on :3000...")
 		log.Fatal(http.ListenAndServe(":3000", mux))
 	})
@@ -90,7 +90,7 @@ func regenerateHTMLFiles(ctx context.Context, files []domain.File) {
 			}
 			files[articleIndex].Content = content
 
-			if err := os.WriteFile(files[articleIndex].DebugFilePath(), []byte(files[articleIndex].Content), 0644); err != nil {
+			if err := os.WriteFile(files[articleIndex].DebugFilePath(), []byte(files[articleIndex].Content), 0o644); err != nil {
 				log.Fatalf("error creating html file: %v", err)
 			}
 		}
@@ -105,9 +105,9 @@ func listenToArticleChanges(ctx context.Context, index int, file domain.File, ca
 		cancel()
 		return
 	}
-	ticker := time.NewTicker(5*time.Second)
+	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-ctx.Done():

@@ -5,7 +5,7 @@ import (
 )
 
 type HTTPError struct {
-	Code int `json:"HttpCode"`
+	Code    int    `json:"HttpCode"`
 	Message string `json:"Message"`
 }
 
@@ -14,18 +14,18 @@ func (httpErr HTTPError) NotFound() bool {
 }
 
 type File struct {
-	GUID string `json:"Guid"`
-	StorageZoneName string `json:"StorageZoneName"`
-	Path string `json:"Path"`
-	Name string `json:"ObjectName"`
-	Length uint `json:"Length"`
-	Checksum *string `json:"Checksum,omitempty"`
-	ContentType string `json:"ContentType,omitempty"`
+	GUID            string  `json:"Guid"`
+	StorageZoneName string  `json:"StorageZoneName"`
+	Path            string  `json:"Path"`
+	Name            string  `json:"ObjectName"`
+	Length          uint    `json:"Length"`
+	Checksum        *string `json:"Checksum,omitempty"`
+	ContentType     string  `json:"ContentType,omitempty"`
 	ReplicatedZones *string `json:"ReplicatedZones,omitempty"`
-	LastChanged string `json:"LastChanged"`
-	IsDirectory bool `json:"IsDirectory"`
-	ServerID int `json:"ServerId"`
-	UserID string `json:"UserId"`
-	DateCreated string `json:"DateCreated"`
-	StorageZoneID int `json:"StorageZoneId"`
+	LastChanged     string  `json:"LastChanged"`
+	IsDirectory     bool    `json:"IsDirectory"`
+	ServerID        int     `json:"ServerId"`
+	UserID          string  `json:"UserId"`
+	DateCreated     string  `json:"DateCreated"`
+	StorageZoneID   int     `json:"StorageZoneId"`
 }

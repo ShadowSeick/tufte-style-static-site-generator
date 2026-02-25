@@ -15,7 +15,7 @@ import (
 func main() {
 	// Get flags
 	flags.Init()
-	
+
 	// Build Articles
 	blogPath, err := filepath.Abs(domain.Article.LocalDirectory())
 	if err != nil {
@@ -77,7 +77,7 @@ func main() {
 	}
 
 	// Order in Most recent first
-	
+
 	var files []domain.File
 	for i := range domain.LanguageCount {
 		slices.Reverse(articles[i])
@@ -121,7 +121,7 @@ func main() {
 		fmt.Println("error creating new file: ", err)
 		return
 	}
-	
+
 	contactIndex.Content = generate.ContactIndexHtml(domain.English)
 	files = append(files, contactIndex)
 
@@ -129,7 +129,7 @@ func main() {
 	// if !flags.IsSet(flags.Debug) {
 	// 	InitUpload(context.Background(), files)
 	// }
-	
+
 	// Debug
 	if flags.IsSet(flags.Debug) {
 		InitDebug(context.Background(), files)

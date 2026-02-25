@@ -4,9 +4,7 @@ import (
 	"errors"
 )
 
-var (
-	ErrInvalidFormat = errors.New("invalid format")
-)
+var ErrInvalidFormat = errors.New("invalid format")
 
 type Format uint8
 
@@ -18,7 +16,7 @@ const (
 
 var formatNames = [FormatCount]string{
 	Markdown: "md",
-	HTML: "html",
+	HTML:     "html",
 }
 
 func (f Format) String() string {

@@ -9,11 +9,11 @@ import (
 )
 
 type File struct {
-	Name string
+	Name     string
 	Language Language
-	Date *time.Time
-	Type FileType
-	Content string
+	Date     *time.Time
+	Type     FileType
+	Content  string
 }
 
 func (f *File) DateString() string {
@@ -61,9 +61,9 @@ func (f *File) Title() string {
 	case ContactIndex:
 		return "Nerd with a mouth - Contact"
 	default:
-		panic("title not handled for file type "+f.Type.String())
+		panic("title not handled for file type " + f.Type.String())
 	}
-	}
+}
 
 func (f *File) Checksum() string {
 	if f.Content == "" {
@@ -117,12 +117,12 @@ const (
 )
 
 var fileTypeStrings = [FileTypeCount]string{
-	Article: "article",
-	Index: "home page",
+	Article:      "article",
+	Index:        "home page",
 	ArticleIndex: "articles index page",
 	ContactIndex: "contact info",
-	Image: "image",
-	Gif: "gif",
+	Image:        "image",
+	Gif:          "gif",
 }
 
 func (f FileType) String() string {
@@ -133,30 +133,30 @@ func (f FileType) String() string {
 }
 
 var remoteDirectory = [FileTypeCount]string{
-	Article: "articles",
-	Index: "",
+	Article:      "articles",
+	Index:        "",
 	ArticleIndex: "articles",
 	ContactIndex: "",
-	Image: "assets/images",
-	Gif: "assets/images",
+	Image:        "assets/images",
+	Gif:          "assets/images",
 }
 
 var localDirectory = [FileTypeCount]string{
-	Article: "articles",
-	Index: "",
+	Article:      "articles",
+	Index:        "",
 	ArticleIndex: "articles",
 	ContactIndex: "",
-	Image: "assets/images",
-	Gif: "assets/images",
+	Image:        "assets/images",
+	Gif:          "assets/images",
 }
 
 var debugDirectory = [FileTypeCount]string{
-	Article: "debug/%s/articles",
-	Index: "debug/%s",
+	Article:      "debug/%s/articles",
+	Index:        "debug/%s",
 	ArticleIndex: "debug/%s/articles",
 	ContactIndex: "debug/%s",
-	Image: "assets/images",
-	Gif: "assets/images",
+	Image:        "assets/images",
+	Gif:          "assets/images",
 }
 
 func (f FileType) RemoteDirectory() string {
@@ -174,7 +174,7 @@ func (f FileType) LocalDirectory() string {
 }
 
 func (f FileType) DebugDirectory(language Language) string {
-if f >= FileTypeCount {
+	if f >= FileTypeCount {
 		panic("invalid file type")
 	}
 	return fmt.Sprintf(debugDirectory[f], language.String())

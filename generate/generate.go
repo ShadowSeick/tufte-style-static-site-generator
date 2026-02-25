@@ -1,13 +1,13 @@
 package generate
 
 import (
+	"bufio"
 	"errors"
+	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"strings"
-	"bufio"
-	"io/fs"
-	"fmt"
 
 	"github.com/ShadowSeick/tufte-style-static-site-generator/domain"
 )
@@ -34,7 +34,7 @@ func ArticleHtml(file domain.File) (string, error) {
 	for !endOfLine {
 		line, err := reader.ReadString('\n')
 		if err != nil {
-			if !errors.Is(io.EOF, err) {
+			if !errors.Is(err, io.EOF) {
 				fmt.Println(fmt.Sprintf("error while reading string: %v", err))
 				return "", err
 			}
