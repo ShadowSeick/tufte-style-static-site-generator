@@ -17,12 +17,16 @@ The program walks through the blog folder. In it, there are different folders co
 - [IN PROGRESS] Make the proper translations for the pages
 - Create github actions to execute this when merged into main
 - Finish HTTP article and publish it
-- Update templates to show some meta information like the image and so forth when the link is shared
+- Make project public
+
+## Improvements
+- Update how I handle the creation of templates and I build pages and articles
+- Naive Pratt parsing like. It is searching for strings and tokens. I tried first this implementation, with no idea I was doing it, but it seemed complicated so I opted for something that worked fast. After seeing others solutions, I realize it was not that difficult and gone with this. Of course I am not following Pratt parsing as a whole, but trying to do a tokenizer like.
+- Logger instead of using raw fmt.Println
 
 ## Implemention
-I have tried with 2 ways:
-- Regexp. It was the simplest and the most naive approach. It was useful for my needs, but after it all worked, I researched for proper parsing implementations.
-- [This would be ideal] Naive Pratt parsing like. It is searching for strings and tokens. I tried first this implementation, with no idea I was doing it, but it seemed complicated so I opted for something that worked fast. After seeing others solutions, I realize it was not that difficult and gone with this. Of course I am not following Pratt parsing as a whole, but trying to do a tokenizer like.
+- Regexp. It was the simplest and the most naive approach. It is useful for my needs, but after it all works, I will research for a proper parsing implementations.
+- Creation of templates is using fmt.Sprintf in it's majority with some sprinkle of strings.Builder for the difficult stuff (mainly Articles). This is naive but it works.
 
 ## Webpage
 As it is a static website, I went with a CDN, exactly [Bunny CDN](bunny.net) for all the blog, images and scripts. Why? It's the cheapest and it does not play with you after a while like cloudflare and apparently it's really well regarded in the community. Besides, it was a really pleasant experience to use and port the domain and use the storage. It has all the tools I need and again it's freakingly cheap.

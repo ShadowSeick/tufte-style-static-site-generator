@@ -56,9 +56,13 @@ var htmlPartStrings = [HTMLCount]string{
   <head>
     <meta charset="utf-8">
     <title>Nerd with a mouth - Blog</title>
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png"/>
+		<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png"/>
+		<link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png"/>
+		<link rel="manifest" href="/assets/site.webmanifest"/>
     <link rel="stylesheet" href="/assets/styles/tufte.css"/>
     <link rel="stylesheet" href="/assets/styles/custom.css"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
   </head>
 	<body>
 	%s
@@ -69,9 +73,13 @@ var htmlPartStrings = [HTMLCount]string{
   <head>
     <meta charset="utf-8">
     <title>Nerd with a mouth - Articles</title>
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png"/>
+		<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png"/>
+		<link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png"/>
+		<link rel="manifest" href="/assets/site.webmanifest"/>
     <link rel="stylesheet" href="/assets/styles/tufte.css"/>
     <link rel="stylesheet" href="/assets/styles/custom.css"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
   </head>
 	<body>
 	%s
@@ -86,9 +94,13 @@ var htmlPartStrings = [HTMLCount]string{
   <head>
     <meta charset="utf-8">
     <title>Nerd with a mouth - Contact Information</title>
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png"/>
+		<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png"/>
+		<link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png"/>
+		<link rel="manifest" href="/assets/site.webmanifest"/>
     <link rel="stylesheet" href="/assets/styles/tufte.css"/>
     <link rel="stylesheet" href="/assets/styles/custom.css"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
   </head>
 	<body>
 	%s
@@ -130,10 +142,14 @@ var htmlPartStrings = [HTMLCount]string{
 	<head>
 		<meta charset="utf-8">
 		<title>%s</title>
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png"/>
+		<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png"/>
+		<link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png"/>
+		<link rel="manifest" href="/assets/site.webmanifest"/>
 		<link rel="stylesheet" href="/assets/styles/tufte.css"/>
 		<link rel="stylesheet" href="/assets/styles/custom.css"/>
 		<script src="/assets/scripts/highlight/highlight.js"></script>
-		<meta name="viewport" content="width=device-width, initial-scale=1">
 		<script>hljs.highlightAll();</script>
 	</head>
 	<body>
