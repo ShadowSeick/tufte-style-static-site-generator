@@ -14,9 +14,7 @@ The program walks through the blog folder. In it, there are different folders co
 - HTML files will be uploaded to: */{article folder name}/{file language}*
 
 ## TODO
-- [IN PROGRESS] Update the correct files in the correct places
-- Clean folders with dummy articles
-- Make the proper translations for the pages
+- [IN PROGRESS] Make the proper translations for the pages
 - Create github actions to execute this when merged into main
 - Finish HTTP article and publish it
 - Update templates to show some meta information like the image and so forth when the link is shared

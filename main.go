@@ -126,9 +126,9 @@ func main() {
 	files = append(files, contactIndex)
 
 	// Upload
-	// if !flags.IsSet(flags.Debug) {
-	// 	InitUpload(context.Background(), files)
-	// }
+	if !flags.IsSet(flags.Debug) {
+		InitUpload(context.Background(), files)
+	}
 
 	// Debug
 	if flags.IsSet(flags.Debug) {

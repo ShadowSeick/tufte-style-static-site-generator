@@ -17,28 +17,25 @@ const (
 )
 
 var (
-	initialize         sync.Once
-	bunnyStorageApiURL string
-	headers            = make(map[string]string, 2) // We will have a maximum of 2 headers, access key and checksum
+	initialize      sync.Once
+	bunnyStorageURL string
+	headers         = make(map[string]string, 2) // We will have a maximum of 2 headers, access key and checksum
 )
 
 func Init() {
 	initialize.Do(func() {
-		bunnyStorageApiURL = os.Getenv("BUNNY_STORAGE_API_URL")
-		bunnyStorageApiURL = "https://storage.bunnycdn.com/"
-		if bunnyStorageApiURL == "" {
+		bunnyStorageURL = os.Getenv("BUNNY_STORAGE_API_URL")
+		if bunnyStorageURL == "" {
 			panic("bunny storage api url not set")
 		}
 
 		storageZone := os.Getenv("BUNNY_STORAGE_ZONE")
-		storageZone = "nwm-blog"
 		if storageZone == "" {
 			panic("bunny storage zone not set")
 		}
-		bunnyStorageApiURL = fmt.Sprintf("%s%s/", bunnyStorageApiURL, storageZone)
+		bunnyStorageURL = fmt.Sprintf("%s%s/", bunnyStorageURL, storageZone)
 
 		accessKey := os.Getenv("BUNNY_STORAGE_ACCESS_KEY")
-		accessKey = "731a4ff4-b200-4105-97ee9f7d8e75-2908-4891"
 		if accessKey == "" {
 			panic("bunny storage access key not set")
 		}
@@ -48,7 +45,7 @@ func Init() {
 
 func GetFile(ctx context.Context, path string) ([]File, error) {
 	body, err := http.Get(ctx, http.Request{
-		URL:     bunnyStorageApiURL + path,
+		URL:     bunnyStorageURL + path,
 		Headers: headers,
 	})
 	if err != nil {
@@ -76,7 +73,7 @@ func UploadFile(ctx context.Context, path string, checksum string, data []byte) 
 	uploadHeaders[http.ContentType.String()] = http.ApplicationOctetStream.String()
 
 	body, err := http.Put(ctx, http.Request{
-		URL:     bunnyStorageApiURL + path,
+		URL:     bunnyStorageURL + path,
 		Headers: uploadHeaders,
 		Body:    data,
 	})
