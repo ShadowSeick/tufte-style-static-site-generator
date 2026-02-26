@@ -131,7 +131,7 @@ var htmlPartStrings = [HTMLCount]string{
 		<ul class="menu">
 			<li><a href="/%s/">Home</a></li>
 			<li><a href="/%s/articles/">Articles</a></li>
-			<li><a href="/%s/contact.html">Contact Info</a></li>
+			<li><a href="/%s/contact.html">Contact</a></li>
 		</ul>
 	</nav>
 </header>`,

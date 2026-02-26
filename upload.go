@@ -53,7 +53,7 @@ func InitUpload(ctx context.Context, files []domain.File) {
 				fmt.Println("error updating file: %w", err)
 				return
 			}
-			fmt.Println("Uploaded file", file.Title())
+			fmt.Println(file.Title(), " uploaded")
 		})
 	}
 
