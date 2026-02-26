@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -16,26 +17,38 @@ func InitUpload(ctx context.Context, files []domain.File) {
 	newCtx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 
-	var wg sync.WaitGroup
-	for _, file := range files {
-		wg.Go(func() {
-			files, err := bunny.GetFile(newCtx, file.RemoteFilePath())
+	// Get the remote files and do your fucking job
+	uploadedFiles := make(map[string]bunny.File, 0)
+	availableFiles := []domain.FileType{domain.Article, domain.Index, domain.ArticleIndex, domain.ContactIndex}
+	// Surely there is a better way, but it's not necessary for now
+	// For each language get all remote files
+	for i := range domain.LanguageCount {
+		for _, fileType := range availableFiles {
+			files, err := bunny.GetFile(newCtx, filepath.Join(i.String(), fileType.RemoteDirectory()))
 			if err != nil {
 				fmt.Println("error while getting file: ", err)
 				return
 			}
 
-			if len(files) > 1 {
-				fmt.Println("more than one file with the same name! ", files)
-				return
+			for _, file := range files {
+				if file.IsDirectory {
+					continue
+				}
+				uploadedFiles[filepath.Join(i.String(), fileType.RemoteDirectory(), file.Name)] = file
 			}
+		}
+	}
 
-			if len(files) == 1 && files[0].Checksum != nil && *files[0].Checksum == file.Checksum() {
+	var wg sync.WaitGroup
+	for _, file := range files {
+		wg.Go(func() {
+			uploadedFile := uploadedFiles[file.RemoteFilePath()]
+			if uploadedFile.Checksum != nil && *uploadedFile.Checksum == file.Checksum() {
 				fmt.Println("file ", file.Title(), " is already uploaded")
 				return
 			}
 
-			fmt.Println("uploading file...", file.Title())
+			fmt.Println("uploading file... ", file.Title())
 			if err := bunny.UploadFile(ctx, file.RemoteFilePath(), file.Checksum(), []byte(file.Content)); err != nil {
 				fmt.Println("error updating file: %w", err)
 				return
@@ -45,5 +58,5 @@ func InitUpload(ctx context.Context, files []domain.File) {
 
 	wg.Wait()
 
-	fmt.Println("Finished uploading articles")
+	fmt.Println("Finished uploading files")
 }

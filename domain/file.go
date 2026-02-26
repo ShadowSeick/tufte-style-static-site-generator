@@ -179,3 +179,19 @@ func (f FileType) DebugDirectory(language Language) string {
 	}
 	return fmt.Sprintf(debugDirectory[f], language.String())
 }
+
+var remoteFileTypeFormat = [FileTypeCount]Format{
+	Article:      HTML,
+	Index:        HTML,
+	ArticleIndex: HTML,
+	ContactIndex: HTML,
+	Image:        JPG,
+	Gif:          GIF,
+}
+
+func (f FileType) RemoteFormat() Format {
+	if f >= FileTypeCount {
+		panic("invalid file type")
+	}
+	return remoteFileTypeFormat[f]
+}

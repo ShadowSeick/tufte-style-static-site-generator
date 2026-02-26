@@ -11,12 +11,16 @@ type Format uint8
 const (
 	Markdown Format = iota
 	HTML
+	JPG
+	GIF
 	FormatCount
 )
 
 var formatNames = [FormatCount]string{
 	Markdown: "md",
 	HTML:     "html",
+	JPG:      "jpg",
+	GIF:      "gif",
 }
 
 func (f Format) String() string {

@@ -45,7 +45,7 @@ func Init() {
 
 func GetFile(ctx context.Context, path string) ([]File, error) {
 	body, err := http.Get(ctx, http.Request{
-		URL:     bunnyStorageURL + path,
+		URL:     bunnyStorageURL + path + "/",
 		Headers: headers,
 	})
 	if err != nil {
@@ -53,7 +53,6 @@ func GetFile(ctx context.Context, path string) ([]File, error) {
 	}
 
 	var files []File
-	fmt.Println(string(body))
 	if err := json.Unmarshal(body, &files); err != nil {
 		var httpError HTTPError
 		if subErr := json.Unmarshal(body, &httpError); subErr != nil {
