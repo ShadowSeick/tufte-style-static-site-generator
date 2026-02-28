@@ -83,46 +83,47 @@ func main() {
 		files = append(files, articles[i]...)
 	}
 
-	// I need to add the spanish version though
-	// Index page
-	index, err := domain.NewFile(domain.English, "index.html", domain.Index)
-	if err != nil {
-		fmt.Println("error creating new file: ", err)
-		return
-	}
-	// I am not sure if leaving as it is or taking them from somewhere. I think hardcoding them is not a big issue
-	content, err := generate.IndexHtml(domain.English, articles[domain.English], domain.PublicProjects)
-	if err != nil {
-		fmt.Println("error generating index html: ", err)
-		return
-	}
-	index.Content = content
-	files = append(files, index)
+	for i := range domain.LanguageCount {
+		// Index page
+		index, err := domain.NewFile(i, "index.html", domain.Index)
+		if err != nil {
+			fmt.Println("error creating new file: ", err)
+			return
+		}
 
-	// Articles index page
-	articlesIndex, err := domain.NewFile(domain.English, "index.html", domain.ArticleIndex)
-	if err != nil {
-		fmt.Println("error creating new file: ", err)
-		return
-	}
+		content, err := generate.IndexHtml(i, articles[i], domain.PublicProjects[i])
+		if err != nil {
+			fmt.Println("error generating index html: ", err)
+			return
+		}
+		index.Content = content
+		files = append(files, index)
 
-	content, err = generate.ArticlesIndexHtml(domain.English, articles[domain.English])
-	if err != nil {
-		fmt.Println("error generating articles index html: ", err)
-		return
-	}
-	articlesIndex.Content = content
-	files = append(files, articlesIndex)
+		// Articles index page
+		articlesIndex, err := domain.NewFile(i, "index.html", domain.ArticleIndex)
+		if err != nil {
+			fmt.Println("error creating new file: ", err)
+			return
+		}
 
-	// Contact info page
-	contactIndex, err := domain.NewFile(domain.English, "contact.html", domain.ContactIndex)
-	if err != nil {
-		fmt.Println("error creating new file: ", err)
-		return
-	}
+		content, err = generate.ArticlesIndexHtml(i, articles[i])
+		if err != nil {
+			fmt.Println("error generating articles index html: ", err)
+			return
+		}
+		articlesIndex.Content = content
+		files = append(files, articlesIndex)
 
-	contactIndex.Content = generate.ContactIndexHtml(domain.English)
-	files = append(files, contactIndex)
+		// Contact page
+		contactIndex, err := domain.NewFile(i, "contact.html", domain.ContactIndex)
+		if err != nil {
+			fmt.Println("error creating new file: ", err)
+			return
+		}
+
+		contactIndex.Content = generate.ContactIndexHtml(i)
+		files = append(files, contactIndex)
+	}
 
 	// Upload
 	if !flags.IsSet(flags.Debug) {

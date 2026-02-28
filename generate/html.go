@@ -1,8 +1,6 @@
 package generate
 
 import (
-	"fmt"
-
 	"github.com/ShadowSeick/tufte-style-static-site-generator/domain"
 )
 
@@ -50,9 +48,9 @@ const (
 	HTMLCount
 )
 
-var htmlPartStrings = [HTMLCount]string{
+var htmlSpanishStrings = [HTMLCount]string{
 	HomePage: `<!DOCTYPE html>
-<html>
+<html lang="es">
   <head>
     <meta charset="utf-8">
     <title>Nerd with a mouth - Blog</title>
@@ -69,7 +67,118 @@ var htmlPartStrings = [HTMLCount]string{
 	</body>
 </html>`,
 	ArticlesPage: `<!DOCTYPE html>
-<html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <title>Nerd with a mouth - Artículos</title>
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png"/>
+		<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png"/>
+		<link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png"/>
+		<link rel="manifest" href="/assets/site.webmanifest"/>
+    <link rel="stylesheet" href="/assets/styles/tufte.css"/>
+    <link rel="stylesheet" href="/assets/styles/custom.css"/>
+  </head>
+	<body>
+	%s
+	<h1 id="articles">Artículos</h1>
+	<ul class="articles">
+		%s
+	</ul>
+	</body>
+</html>`,
+	ContactPage: `<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <title>Nerd with a mouth - Contacto</title>
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png"/>
+		<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png"/>
+		<link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png"/>
+		<link rel="manifest" href="/assets/site.webmanifest"/>
+    <link rel="stylesheet" href="/assets/styles/tufte.css"/>
+    <link rel="stylesheet" href="/assets/styles/custom.css"/>
+  </head>
+	<body>
+	%s
+	<h2 id="contact-info">Contacto</h2>
+	<table class="nwm-table">
+		<tbody>
+			<tr>
+				<td>Email:</td>
+				<td><a href="mailto:alcolka@gmail.com">adrian<em>[at]</em>nerdwithamouth<em>[dot]</em>com</a></td>
+			</tr>
+			<tr>
+				<td>Github:</td>
+				<td><a target="_blank" href="https://github.com/ShadowSeick">github.com/ShadowSeick</a></td>
+			</tr>
+			<tr>
+				<td>LinkedIn:</td>
+				<td><a target="_blank" href="https://linkedin.com/in/adrián-muñoz-gonzález-b98669136/">Adrián Muñoz González</a></td>
+			</tr>
+		</tbody>
+	</table>
+	</body>
+</html>`,
+	Navbar: `<header>
+	<nav>
+		<h1 id="logo">
+			<a href="/es/index.html">Nerd<span class="white">With</span>A<span class="white">Mouth</span></a>
+		</h1>
+		<ul class="menu">
+			<li><a href="/es/index.html">Inicio</a></li>
+			<li><a href="/es/articles/index.html">Artículos</a></li>
+			<li><a href="/es/contact.html">Contacto</a></li>
+		</ul>
+	</nav>
+</header>`,
+	ProjectsInfo: `<h2 id="projects-info">Proyectos</h2><table class="nwm-table"><tbody>%s</tbody></table>`,
+	ArticlesInfo: `<h2 id="articles-info">Artículos</h2><ul class="articles">%s</ul>`,
+	ArticleTemplate: `<!DOCTYPE html>
+<html lang="es">
+	<head>
+		<meta charset="utf-8">
+		<title>%s</title>
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png"/>
+		<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png"/>
+		<link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png"/>
+		<link rel="manifest" href="/assets/site.webmanifest"/>
+		<link rel="stylesheet" href="/assets/styles/tufte.css"/>
+		<link rel="stylesheet" href="/assets/styles/custom.css"/>
+		<script src="/assets/scripts/highlight/highlight.js"></script>
+		<script>hljs.highlightAll();</script>
+	</head>
+	<body>
+		%s
+		<article>
+		%s
+		</article>
+	</body>
+</html>`,
+}
+
+var htmlEnglishStrings = [HTMLCount]string{
+	HomePage: `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Nerd with a mouth - Blog</title>
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png"/>
+		<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png"/>
+		<link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png"/>
+		<link rel="manifest" href="/assets/site.webmanifest"/>
+    <link rel="stylesheet" href="/assets/styles/tufte.css"/>
+    <link rel="stylesheet" href="/assets/styles/custom.css"/>
+  </head>
+	<body>
+	%s
+	</body>
+</html>`,
+	ArticlesPage: `<!DOCTYPE html>
+<html lang="en">
   <head>
     <meta charset="utf-8">
     <title>Nerd with a mouth - Articles</title>
@@ -90,10 +199,10 @@ var htmlPartStrings = [HTMLCount]string{
 	</body>
 </html>`,
 	ContactPage: `<!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>Nerd with a mouth - Contact Information</title>
+    <title>Nerd with a mouth - Contact</title>
 		<meta name="viewport" content="width=device-width, initial-scale=1">
 		<link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png"/>
 		<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png"/>
@@ -104,7 +213,7 @@ var htmlPartStrings = [HTMLCount]string{
   </head>
 	<body>
 	%s
-	<h2 id="contact-info">Contact Information</h2>
+	<h2 id="contact-info">Contact</h2>
 	<table class="nwm-table">
 		<tbody>
 			<tr>
@@ -126,19 +235,19 @@ var htmlPartStrings = [HTMLCount]string{
 	Navbar: `<header>
 	<nav>
 		<h1 id="logo">
-			<a href="/%s/">Nerd<span class="white">With</span>A<span class="white">Mouth</span></a>
+			<a href="/en/index.html">Nerd<span class="white">With</span>A<span class="white">Mouth</span></a>
 		</h1>
 		<ul class="menu">
-			<li><a href="/%s/">Home</a></li>
-			<li><a href="/%s/articles/">Articles</a></li>
-			<li><a href="/%s/contact.html">Contact</a></li>
+			<li><a href="/en/index.html">Home</a></li>
+			<li><a href="/en/articles/index.html">Articles</a></li>
+			<li><a href="/en/contact.html">Contact</a></li>
 		</ul>
 	</nav>
 </header>`,
 	ProjectsInfo: `<h2 id="projects-info">Projects</h2><table class="nwm-table"><tbody>%s</tbody></table>`,
 	ArticlesInfo: `<h2 id="articles-info">Articles</h2><ul class="articles">%s</ul>`,
 	ArticleTemplate: `<!DOCTYPE html>
-<html>
+<html lang="en">
 	<head>
 		<meta charset="utf-8">
 		<title>%s</title>
@@ -165,10 +274,12 @@ func (html HTMLPart) String(language domain.Language) string {
 	if html >= HTMLCount {
 		panic("invalid html part")
 	}
-	switch html {
-	case Navbar:
-		lang := language.String()
-		return fmt.Sprintf(htmlPartStrings[html], lang, lang, lang, lang)
+	switch language {
+	case domain.English:
+		return htmlEnglishStrings[html]
+	case domain.Spanish:
+		return htmlSpanishStrings[html]
+	default:
+		panic("invalid language")
 	}
-	return htmlPartStrings[html]
 }
