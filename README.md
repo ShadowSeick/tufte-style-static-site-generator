@@ -14,9 +14,7 @@ The program walks through the blog folder. In it, there are different folders co
 - HTML files will be uploaded to: */{article folder name}/{file language}*
 
 ## TODO
-- [IN PROGRESS] Create github actions to execute this when merged into main
 - Finish HTTP article and publish it
-- Make project public
 
 ## Improvements
 - Update how I handle the creation of templates and I build pages and articles

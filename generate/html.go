@@ -123,9 +123,16 @@ var htmlSpanishStrings = [HTMLCount]string{
 </html>`,
 	Navbar: `<header>
 	<nav>
-		<h1 id="logo">
-			<a href="/es/index.html">Nerd<span class="white">With</span>A<span class="white">Mouth</span></a>
-		</h1>
+		<div class="header">
+			<h1 id="logo">
+				<a href="/es/index.html">Nerd<span class="white">With</span>A<span class="white">Mouth</span></a>
+			</h1>
+			<ul class="languages">
+				<li><a href="#" id="lang-en">en</a></li>
+				<li><a href="#" id="lang-es">es</a></li>
+				<script src="/assets/scripts/change-language.js"></script>
+			</ul>
+		</div>
 		<ul class="menu">
 			<li><a href="/es/index.html">Inicio</a></li>
 			<li><a href="/es/articles/index.html">Artículos</a></li>
@@ -234,9 +241,16 @@ var htmlEnglishStrings = [HTMLCount]string{
 </html>`,
 	Navbar: `<header>
 	<nav>
-		<h1 id="logo">
-			<a href="/en/index.html">Nerd<span class="white">With</span>A<span class="white">Mouth</span></a>
-		</h1>
+		<div class="header">
+			<h1 id="logo">
+				<a href="/es/index.html">Nerd<span class="white">With</span>A<span class="white">Mouth</span></a>
+			</h1>
+			<ul class="languages">
+				<li><a href="#" id="lang-en">en</a></li>
+				<li><a href="#" id="lang-es">es</a></li>
+				<script src="/assets/scripts/change-language.js"></script>
+			</ul>
+		</div>
 		<ul class="menu">
 			<li><a href="/en/index.html">Home</a></li>
 			<li><a href="/en/articles/index.html">Articles</a></li>
