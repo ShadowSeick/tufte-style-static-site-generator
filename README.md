@@ -17,9 +17,9 @@ The program walks through the blog folder. In it, there are different folders co
 - Finish HTTP article and publish it
 
 ## Improvements
-- Update how I handle the creation of templates and I build pages and articles
+- Type file tries to do everything. It should be an interface and then each file type should be it's own struct that implements it. This will simplify the code a lot.
+- Update how I handle the creation of templates and I build pages and articles. I should use string builder or bytes buffer to generate the new templates.
 - Naive Pratt parsing like. It is searching for strings and tokens. I tried first this implementation, with no idea I was doing it, but it seemed complicated so I opted for something that worked fast. After seeing others solutions, I realize it was not that difficult and gone with this. Of course I am not following Pratt parsing as a whole, but trying to do a tokenizer like.
-- Logger instead of using raw fmt.Println
 
 ## Implemention
 - Regexp. It was the simplest and the most naive approach. It is useful for my needs, but after it all works, I will research for a proper parsing implementations.

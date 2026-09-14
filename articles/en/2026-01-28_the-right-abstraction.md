@@ -1,5 +1,5 @@
-# The right abstraction {@the-right-abstraction}
-[^sub-header](2026-01-28)
+# The right abstraction
+?[^sub-header](2026-01-28)
 In programming, we focus a lot in the right abstraction, data structure, algorithm or design pattern. We think a lot about the API endpoints or an interface we expose to the end user, but do we think about the implication of what we are building?
 
 We are giving to the users a set of interfaces, visual or programmatic ones, so they can interact with our data, our own abstraction of the business or the real world to perform some action. This data needs to be stored in some place, whether using a cache layer, database, in memory or just a file. Those persistent or not so persistent layers gives us an interface to interact with their abstraction of disk writes and reads which at the same time they are an abstraction of ones and zeroes; it’s just data all the way through.

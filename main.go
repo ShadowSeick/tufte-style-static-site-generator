@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io/fs"
+	"log/slog"
 	"path/filepath"
 	"slices"
 
@@ -72,7 +73,7 @@ func main() {
 		return nil
 	})
 	if err != nil {
-		fmt.Println("error while walking through blog file path: ", err)
+		slog.Error("error while walking through blog file path", "err", err)
 		return
 	}
 
@@ -87,13 +88,13 @@ func main() {
 		// Index page
 		index, err := domain.NewFile(i, "index.html", domain.Index)
 		if err != nil {
-			fmt.Println("error creating new file: ", err)
+			slog.Error("error creating new file", "err", err)
 			return
 		}
 
 		content, err := generate.IndexHtml(i, articles[i], domain.PublicProjects[i])
 		if err != nil {
-			fmt.Println("error generating index html: ", err)
+			slog.Error("error generating index html", "err", err)
 			return
 		}
 		index.Content = content
@@ -102,13 +103,13 @@ func main() {
 		// Articles index page
 		articlesIndex, err := domain.NewFile(i, "index.html", domain.ArticleIndex)
 		if err != nil {
-			fmt.Println("error creating new file: ", err)
+			slog.Error("error creating new file", "err", err)
 			return
 		}
 
 		content, err = generate.ArticlesIndexHtml(i, articles[i])
 		if err != nil {
-			fmt.Println("error generating articles index html: ", err)
+			slog.Error("error generating articles index html", "err", err)
 			return
 		}
 		articlesIndex.Content = content
@@ -117,7 +118,7 @@ func main() {
 		// Contact page
 		contactIndex, err := domain.NewFile(i, "contact.html", domain.ContactIndex)
 		if err != nil {
-			fmt.Println("error creating new file: ", err)
+			slog.Error("error creating new file", "err", err)
 			return
 		}
 

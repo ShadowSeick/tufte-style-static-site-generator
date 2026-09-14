@@ -81,6 +81,7 @@ func ArticleHtml(file domain.File) (string, error) {
 }
 
 // This is comboluted, I don't like it. This would be much simpler with a strings builder from scratch
+// The next functions need to be changed to use a strings.builder instead
 func IndexHtml(language domain.Language, files []domain.File, projects []domain.Project) (string, error) {
 	for _, file := range files {
 		if file.Type != domain.Article {

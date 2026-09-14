@@ -39,11 +39,11 @@ var htmlString = [MarkdownCount]string{
 
 var markdownRegexp = [MarkdownCount]*regexp.Regexp{
 	Header:     regexp.MustCompile(`^(?P<hashes>#+)\s+(?P<text>.+)\s+\{@(?P<id>.+)\}$`),
-	Subheader:  regexp.MustCompile(`\[\^sub-header\]\((?P<text>.+?)\)`),
+	Subheader:  regexp.MustCompile(`\?[\^sub-header\]\((?P<text>.+?)\)`),
 	Paragraph:  nil,
 	Link:       regexp.MustCompile(`\[(?P<text>[^\]]+)\]\((?P<url>[^\)]+)\)`),
-	SideNote:   regexp.MustCompile(`\[\^side-note @(?P<id>[^\]]+)\]`),
-	MarginNote: regexp.MustCompile(`\[\^margin-note @(?P<id>[^\]]+)\]`),
+	SideNote:   regexp.MustCompile(`\?[\^side-note @(?P<id>[^\]]+)\]`),
+	MarginNote: regexp.MustCompile(`\?[\^margin-note @(?P<id>[^\]]+)\]`),
 	Code:       regexp.MustCompile("```(?P<lang>[a-z]*)\\n(?P<code>[\\s\\S]+?)```"),
 	InlineCode: regexp.MustCompile("`(?P<code>[^`]+)`"),
 	Image:      regexp.MustCompile(`!\[(?P<alt>[^\]]*)\]\((?P<url>[^\)]+)\)`),
@@ -66,7 +66,7 @@ func (el MarkdownElement) Html(text string) (string, bool) {
 		matches := markdownRegexp[Header].FindStringSubmatch(text)
 		level := len(matches[1])
 		id := matches[3]
-		text := matches[2]
+		text = matches[2]
 
 		result = fmt.Sprintf(htmlString[Header], level, id, text, level)
 	case SideNote, MarginNote: // This is fucking ugly but it works. Maybe there is a better way to do it

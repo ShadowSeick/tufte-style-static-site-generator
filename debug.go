@@ -2,8 +2,8 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -76,7 +76,7 @@ func regenerateHTMLFiles(ctx context.Context, files []domain.File) {
 	for {
 		select {
 		case <-ctx.Done():
-			fmt.Println("gracefully shutting down")
+			slog.Error("gracefully shutting down")
 			return
 		case articleIndex, ok := <-changesChannel:
 			if !ok { // Channel closed
@@ -85,7 +85,7 @@ func regenerateHTMLFiles(ctx context.Context, files []domain.File) {
 
 			content, err := generate.ArticleHtml(files[articleIndex])
 			if err != nil {
-				fmt.Println("error regenerating html file", files[articleIndex].Name, err)
+				slog.Error("error regenerating html file", files[articleIndex].Name, err)
 				return
 			}
 			files[articleIndex].Content = content
@@ -101,7 +101,7 @@ func listenToArticleChanges(ctx context.Context, index int, file domain.File, ca
 	filepath := file.LocalFilePath()
 	currStat, err := os.Stat(filepath)
 	if err != nil {
-		fmt.Println("error has occurred when listening to file stat", filepath, err)
+		slog.Error("error has occurred when listening to file stat", filepath, err)
 		cancel()
 		return
 	}
@@ -111,12 +111,12 @@ func listenToArticleChanges(ctx context.Context, index int, file domain.File, ca
 	for {
 		select {
 		case <-ctx.Done():
-			fmt.Println("gracefully shuttinwdown listening to article: ", file.Title())
+			slog.Error("gracefully shuttinwdown listening to article: ", file.Title())
 			return
 		case <-ticker.C:
 			stat, err := os.Stat(filepath)
 			if err != nil {
-				fmt.Println("error has occurred when listening to file stat", filepath, err)
+				slog.Error("error has occurred when listening to file stat", filepath, err)
 				cancel()
 				return
 			}
