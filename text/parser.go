@@ -2,6 +2,7 @@ package text
 
 import (
 	"errors"
+	"fmt"
 	"slices"
 )
 
@@ -11,6 +12,8 @@ var (
 	ErrMarkdownTypeNotImplemented = errors.New("markdown type not implemented")
 	ErrNotValidLink               = errors.New("not valid link")
 )
+
+// TODO: I need to implement image, code and font modifiers
 
 const (
 	title         = '#'
@@ -26,9 +29,9 @@ const (
 	closeSquaredParenthesis = ']'
 	space                   = ' '
 
-	subheaderIdentifier  = "[^subheader]"
-	marginNoteIdentifier = "[^margin-note]"
-	sideNoteIdentifier   = "[^side-note]"
+	subheaderIdentifier  = "^subheader"
+	marginNoteIdentifier = "^margin-note"
+	sideNoteIdentifier   = "^side-note"
 )
 
 type Parser struct {
@@ -49,7 +52,7 @@ func (p *Parser) Parse() ([]Token, []error) {
 	var tokens []Token
 	for p.offset < len(p.source) {
 		// We are at the start of the line;
-		// Test for header of subheader
+		// Test for header or subheader
 		if p.column == 0 {
 			switch p.source[p.offset] {
 			case title:
@@ -63,7 +66,7 @@ func (p *Parser) Parse() ([]Token, []error) {
 				}
 
 			case custom:
-				t, err := p.parseCustom(subheaderIdentifier)
+				t, err := p.parseCustom()
 				if t != nil {
 					tokens = append(tokens, t)
 					continue
@@ -76,13 +79,14 @@ func (p *Parser) Parse() ([]Token, []error) {
 
 		switch p.source[p.offset] {
 		case custom:
-			// Parse maybeCustom
-			// Here what I need to do is to parse it recursively
-			// it can contain as many tokens possible
-			// We should just parse the contents in it as well.
-			//
-			// The main idea is to parse only the content inside it,
-			// treating it as another source, returning the actualy tokens here
+			t, err := p.parseCustom()
+			if t != nil {
+				tokens = append(tokens, t)
+				continue
+			}
+			if err != nil {
+				errs = append(errs, err)
+			}
 		case link:
 			t, err := p.parseLink()
 			if t != nil {
@@ -159,8 +163,7 @@ func (p *Parser) parseTitle() (Token, error) {
 }
 
 func (p *Parser) parseCustom() (Token, error) {
-	// We would get the identifier directly and depending on which one is it parse it one way or another
-	_, contentStart, isBalanced := getContentFromBalanced(p.offset, p.source)
+	identifier, contentStart, contentEnd, isBalanced := getContentFromBalanced(p.offset, p.source)
 	if !isBalanced {
 		return p.parseText()
 	}
@@ -169,13 +172,67 @@ func (p *Parser) parseCustom() (Token, error) {
 		p.advance()
 	}
 
-	token := &Subheader{}
-	p.setSegment(token, rightParenthesis)
-	return token, nil
+	var err error
+	var token Token
+	id := string(identifier)
+	switch id {
+	case subheaderIdentifier:
+		token = &Subheader{}
+	case marginNoteIdentifier:
+		token, err = p.parseChildren(&MarginNote{}, contentStart, contentEnd)
+	case sideNoteIdentifier:
+		token, err = p.parseChildren(&SideNote{}, contentStart, contentEnd)
+	}
+
+	p.setBalancedTokenSegment(token, contentStart, contentEnd)
+	return token, err
+}
+
+func (p *Parser) parseChildren(token CustomToken, start, end int) (Token, error) {
+	var errs []error
+	var tokens []Token
+	for start < end {
+		switch p.source[start] {
+		case link:
+			t, err := p.parseLink()
+			if t != nil {
+				tokens = append(tokens, t)
+				continue
+			}
+			if err != nil {
+				errs = append(errs, err)
+			}
+		case image:
+			// Parse maybeImage
+		case code:
+			// Parse code
+		case fontModifiers:
+			// Parse font modifiers
+		default:
+			t, err := p.parseText()
+			if t != nil {
+				tokens = append(tokens, t)
+			}
+			if err != nil {
+				errs = append(errs, err)
+			}
+		}
+
+		if !p.isAtEOF() {
+			p.advance()
+		}
+	}
+	var err error
+	for _, e := range errs {
+		err = fmt.Errorf("%w: %w", err, e)
+	}
+
+	token.SetChildren(tokens)
+	return token, err
 }
 
 func (p *Parser) parseLink() (Token, error) {
-	name, contentStart, isNotLink := getContentFromBalanced(p.offset, p.source)
+	name, contentStart, contentEnd, isNotLink := getContentFromBalanced(p.offset, p.source)
 
 	if isNotLink {
 		return p.parseText()
@@ -189,54 +246,71 @@ func (p *Parser) parseLink() (Token, error) {
 		p.advance()
 	}
 
-	p.setSegment(link, rightParenthesis)
+	p.setBalancedTokenSegment(link, contentStart, contentEnd)
 	return link, nil
 }
 
-var openParenthesis = []byte{'[', '('}
+var (
+	openParenthesis  = []byte{'[', '('}
+	closeParenthesis = []byte{']', ')'}
+	contraryChars    = map[byte]byte{
+		']': '[',
+		'[': ']',
+	}
+)
 
-func getContentFromBalanced(start int, source []byte) ([]byte, int, bool) {
+func getContentFromBalanced(start int, source []byte) ([]byte, int, int, bool) {
 	if source[start] != '[' {
-		return nil, 0, false
+		return nil, 0, 0, false
 	}
 
 	content := start + 1
-	var next byte
+	var curr byte
 	balanced := []byte{source[start]}
 	var nameIdx int
 	var isNotValid bool
-outer:
 	for {
-		next = source[content]
-		if next == breakLine {
+		if content >= len(source) {
+			isNotValid = true
 			break
 		}
 
-		if slices.Contains(openParenthesis, next) {
-			balanced = append(balanced, next)
+		curr = source[content]
+		// Balanced markdown structures must live in the same line
+		if curr == '\n' {
+			isNotValid = true
+			break
 		}
-		prev := balanced[len(balanced)-1]
-		switch next {
+
+		if slices.Contains(openParenthesis, curr) {
+			balanced = append(balanced, curr)
+		}
+
+		if len(balanced) == 0 && slices.Contains(closeParenthesis, curr) {
+			isNotValid = true
+			break
+		}
+
+		var prev byte
+		if len(balanced) > 0 {
+			prev = balanced[len(balanced)-1]
+		}
+
+		contrary, ok := contraryChars[curr]
+		if ok && prev != contrary {
+			isNotValid = true
+			break
+		}
+
+		switch curr {
 		case ']':
-			if prev != '[' {
-				isNotValid = true
-				break outer
-			}
 			balanced = balanced[0 : len(balanced)-1]
 			nameIdx = content
 		case ')':
-			if prev != '(' {
-				isNotValid = true
-				break outer
-			}
-
 			balanced = balanced[0 : len(balanced)-1]
-		case '}':
-			isNotValid = true
-			break outer
 		}
 
-		if len(balanced) == 0 && next == ')' {
+		if len(balanced) == 0 && curr == ')' {
 			break
 		}
 		content++
@@ -244,12 +318,14 @@ outer:
 
 	var res []byte
 	var contentStart int
+	var contentEnd int
 	if !isNotValid {
 		res = source[start+1 : nameIdx]
 		// Discard ']('
 		contentStart = nameIdx + 2
+		contentEnd = content
 	}
-	return res, contentStart, !isNotValid
+	return res, contentStart, contentEnd, !isNotValid
 }
 
 func (p *Parser) parseImage() (Token, error) {
@@ -296,4 +372,18 @@ func (p *Parser) setSegment(token Token, terminalChar byte) {
 
 func (p *Parser) isAtEOF() bool {
 	return p.offset >= len(p.source)
+}
+
+func (p *Parser) setBalancedTokenSegment(token Token, start, end int) {
+	var segment Segment
+	// I don't know in which column is it; for now I will set it as the same of offset
+	// TODO: This needs to change to show proper errors
+	segment.SetStart(p.line, start, start)
+	segment.SetEnd(p.line, end, end)
+	// Drop ')'
+	for range end - start + 1 {
+		p.advance()
+	}
+
+	token.SetSegment(segment)
 }

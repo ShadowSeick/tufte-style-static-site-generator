@@ -59,6 +59,11 @@ type Token interface {
 	End() int
 }
 
+type CustomToken interface {
+	SetChildren(ts []Token)
+	Token
+}
+
 type baseToken struct {
 	Content Segment
 }
@@ -115,4 +120,30 @@ type Jump struct {
 
 func (j Jump) String() string {
 	return tokenString[jumpType]
+}
+
+type MarginNote struct {
+	baseToken
+	children []Token
+}
+
+func (mn MarginNote) String() string {
+	return tokenString[marginNoteType]
+}
+
+func (mn *MarginNote) SetChildren(children []Token) {
+	mn.children = append(mn.children, children...)
+}
+
+type SideNote struct {
+	baseToken
+	children []Token
+}
+
+func (sn SideNote) String() string {
+	return tokenString[sideNoteType]
+}
+
+func (sn *SideNote) SetChildren(children []Token) {
+	sn.children = append(sn.children, children...)
 }
