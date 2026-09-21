@@ -255,9 +255,18 @@ var (
 	closeParenthesis = []byte{']', ')'}
 	contraryChars    = map[byte]byte{
 		']': '[',
-		'[': ']',
+		')': '(',
 	}
 )
+
+// What if I make 2 slices
+// 1 -> []int -> maintaining the idx
+// 2 -> []byte -> maintaining the byte
+// I will need to identify afterwards the depth, but this is not the problem.
+// When do I stop?
+//
+// I am thinking this wrongly. I just need to split it in two!
+// First [] then (), this way it's much easier to make
 
 func getContentFromBalanced(start int, source []byte) ([]byte, int, int, bool) {
 	if source[start] != '[' {
@@ -267,6 +276,7 @@ func getContentFromBalanced(start int, source []byte) ([]byte, int, int, bool) {
 	content := start + 1
 	var curr byte
 	balanced := []byte{source[start]}
+	depth := 1
 	var nameIdx int
 	var isNotValid bool
 	for {
@@ -283,10 +293,11 @@ func getContentFromBalanced(start int, source []byte) ([]byte, int, int, bool) {
 		}
 
 		if slices.Contains(openParenthesis, curr) {
+			depth++
 			balanced = append(balanced, curr)
 		}
 
-		if len(balanced) == 0 && slices.Contains(closeParenthesis, curr) {
+		if depth == 0 && slices.Contains(closeParenthesis, curr) {
 			isNotValid = true
 			break
 		}
@@ -304,9 +315,14 @@ func getContentFromBalanced(start int, source []byte) ([]byte, int, int, bool) {
 
 		switch curr {
 		case ']':
+			depth--
 			balanced = balanced[0 : len(balanced)-1]
-			nameIdx = content
+			if depth == 0 {
+				nameIdx = content
+			}
+			break
 		case ')':
+			depth--
 			balanced = balanced[0 : len(balanced)-1]
 		}
 
