@@ -2,6 +2,7 @@ package text
 
 import (
 	"bytes"
+	"errors"
 	"testing"
 )
 
@@ -13,7 +14,7 @@ func TestGetContentFromBalnced(t *testing.T) {
 		expectedRes          []byte
 		expectedContentStart int
 		expectedContentEnd   int
-		expectedIsBalanced   bool
+		err                  error
 	}{
 		{
 			name:                 "correctly balanced link",
@@ -22,16 +23,16 @@ func TestGetContentFromBalnced(t *testing.T) {
 			expectedRes:          []byte("valid link"),
 			expectedContentStart: len("some text here [valid link]("),
 			expectedContentEnd:   len("some text here [valid link](https://example.com"),
-			expectedIsBalanced:   true,
+			err:                  nil,
 		},
 		{
-			name:                 "correctly balanced link with wrong start",
+			name:                 "correctly balanced link with wrong start should be treated as not a markdown structure",
 			input:                []byte("[valid link](https://example.com)"),
 			start:                1,
 			expectedRes:          nil,
 			expectedContentStart: 0,
 			expectedContentEnd:   0,
-			expectedIsBalanced:   false,
+			err:                  nil,
 		},
 		{
 			name:                 "uncorrectly balanced structure",
@@ -40,7 +41,7 @@ func TestGetContentFromBalnced(t *testing.T) {
 			expectedRes:          nil,
 			expectedContentStart: 0,
 			expectedContentEnd:   0,
-			expectedIsBalanced:   false,
+			err:                  ErrNotValidMarkdownStructureName,
 		},
 		{
 			name:                 "correctly with a sub structure balanced structure",
@@ -49,7 +50,7 @@ func TestGetContentFromBalnced(t *testing.T) {
 			expectedRes:          []byte("^some-random-thing"),
 			expectedContentStart: len("[^some-random-thing]("),
 			expectedContentEnd:   len("[^some-random-thing](This is something else ![image here](../../source/image.png)"),
-			expectedIsBalanced:   true,
+			err:                  nil,
 		},
 		{
 			name:                 "uncorrectly added",
@@ -58,7 +59,7 @@ func TestGetContentFromBalnced(t *testing.T) {
 			expectedRes:          nil,
 			expectedContentStart: 0,
 			expectedContentEnd:   0,
-			expectedIsBalanced:   false,
+			err:                  ErrNotValidMarkdownStructureContent,
 		},
 		{
 			name:                 "correctly with uncorrect sub structure",
@@ -67,7 +68,7 @@ func TestGetContentFromBalnced(t *testing.T) {
 			expectedRes:          []byte("^some-random-thing"),
 			expectedContentStart: len("[^some-random-thing]("),
 			expectedContentEnd:   len("[^some-random-thing](This is something else ![image here](../../source/image.png)"),
-			expectedIsBalanced:   true,
+			err:                  nil,
 		},
 		{
 			name:                 "uncorrectly terminated",
@@ -76,13 +77,13 @@ func TestGetContentFromBalnced(t *testing.T) {
 			expectedRes:          nil,
 			expectedContentStart: 0,
 			expectedContentEnd:   0,
-			expectedIsBalanced:   false,
+			err:                  ErrNotValidMarkdownStructureContent,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			res, contentStart, contentEnd, isBalanced := getContentFromBalanced(tt.start, tt.input)
+			res, contentStart, contentEnd, err := getContentFromBalanced(tt.start, tt.input)
 			if !bytes.Equal(tt.expectedRes, res) {
 				t.Errorf("expeced %s but got %s", tt.expectedRes, res)
 			}
@@ -95,8 +96,8 @@ func TestGetContentFromBalnced(t *testing.T) {
 				t.Errorf("expected content to end i %d idx, but it ends in %d", tt.expectedContentEnd, contentEnd)
 			}
 
-			if tt.expectedIsBalanced != isBalanced {
-				t.Errorf("expected content balanced to be %t but got %t", tt.expectedIsBalanced, isBalanced)
+			if err != nil && !errors.Is(tt.err, err) {
+				t.Errorf("expected content balanced to be %s but got %s", tt.err, err)
 			}
 		})
 	}

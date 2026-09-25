@@ -24,10 +24,7 @@ const (
 	fontModifiers = '*'
 	breakLine     = '\n'
 
-	leftParenthesis         = '('
-	rightParenthesis        = ')'
-	closeSquaredParenthesis = ']'
-	space                   = ' '
+	space = ' '
 
 	subheaderIdentifier  = "^subheader"
 	marginNoteIdentifier = "^margin-note"
@@ -163,8 +160,8 @@ func (p *Parser) parseTitle() (Token, error) {
 }
 
 func (p *Parser) parseCustom() (Token, error) {
-	identifier, contentStart, contentEnd, isBalanced := getContentFromBalanced(p.offset, p.source)
-	if !isBalanced {
+	identifier, contentStart, contentEnd, err := getContentFromBalanced(p.offset, p.source)
+	if err != nil {
 		return p.parseText()
 	}
 
@@ -172,7 +169,6 @@ func (p *Parser) parseCustom() (Token, error) {
 		p.advance()
 	}
 
-	var err error
 	var token Token
 	id := string(identifier)
 	switch id {
@@ -232,9 +228,8 @@ func (p *Parser) parseChildren(token CustomToken, start, end int) (Token, error)
 }
 
 func (p *Parser) parseLink() (Token, error) {
-	name, contentStart, contentEnd, isNotLink := getContentFromBalanced(p.offset, p.source)
-
-	if isNotLink {
+	name, contentStart, contentEnd, err := getContentFromBalanced(p.offset, p.source)
+	if err != nil {
 		return p.parseText()
 	}
 
@@ -251,97 +246,70 @@ func (p *Parser) parseLink() (Token, error) {
 }
 
 var (
-	openParenthesis  = []byte{'[', '('}
-	closeParenthesis = []byte{']', ')'}
-	contraryChars    = map[byte]byte{
-		']': '[',
-		')': '(',
-	}
+	ErrNotValidMarkdownStructureName    = errors.New("not valid markdown balanced structure []() name")
+	ErrNotValidMarkdownStructureContent = errors.New("not valid markdown balanced structure []() content")
 )
 
-// What if I make 2 slices
-// 1 -> []int -> maintaining the idx
-// 2 -> []byte -> maintaining the byte
-// I will need to identify afterwards the depth, but this is not the problem.
-// When do I stop?
-//
-// I am thinking this wrongly. I just need to split it in two!
-// First [] then (), this way it's much easier to make
-
-func getContentFromBalanced(start int, source []byte) ([]byte, int, int, bool) {
+// getContentFromBalanced expects the start idx of the markdown structure and the markdown source in bytes array
+// It will return the name in a byte array and the start content idx and end idx of the markdown structure.
+// A valid markdown structure must be balanced []() and not have any jumps between it; []('\n') this is not allowed
+// In case of not being valid, it will return an error
+func getContentFromBalanced(start int, source []byte) ([]byte, int, int, error) {
+	// It is not a markdown structure
 	if source[start] != '[' {
-		return nil, 0, 0, false
+		return nil, 0, 0, nil
 	}
 
-	content := start + 1
-	var curr byte
-	balanced := []byte{source[start]}
-	depth := 1
+	var content int
 	var nameIdx int
-	var isNotValid bool
-	for {
-		if content >= len(source) {
-			isNotValid = true
-			break
-		}
-
-		curr = source[content]
-		// Balanced markdown structures must live in the same line
-		if curr == '\n' {
-			isNotValid = true
-			break
-		}
-
-		if slices.Contains(openParenthesis, curr) {
-			depth++
-			balanced = append(balanced, curr)
-		}
-
-		if depth == 0 && slices.Contains(closeParenthesis, curr) {
-			isNotValid = true
-			break
-		}
-
-		var prev byte
-		if len(balanced) > 0 {
-			prev = balanced[len(balanced)-1]
-		}
-
-		contrary, ok := contraryChars[curr]
-		if ok && prev != contrary {
-			isNotValid = true
-			break
-		}
-
-		switch curr {
+nameLoop:
+	for content < len(source) {
+		switch source[content] {
+		case '\n':
+			break nameLoop
 		case ']':
-			depth--
-			balanced = balanced[0 : len(balanced)-1]
-			if depth == 0 {
-				nameIdx = content
-			}
-			break
-		case ')':
-			depth--
-			balanced = balanced[0 : len(balanced)-1]
-		}
-
-		if len(balanced) == 0 && curr == ')' {
-			break
+			nameIdx = content
+			break nameLoop
 		}
 		content++
 	}
 
-	var res []byte
-	var contentStart int
-	var contentEnd int
-	if !isNotValid {
-		res = source[start+1 : nameIdx]
-		// Discard ']('
-		contentStart = nameIdx + 2
-		contentEnd = content
+	// There is no valid name inside the []
+	if nameIdx < content {
+		return nil, 0, 0, ErrNotValidMarkdownStructureName
 	}
-	return res, contentStart, contentEnd, !isNotValid
+
+	content++
+	// Next character needs to be ( or otherwise it's not valid
+	if source[content] != '(' {
+		return nil, 0, 0, ErrNotValidMarkdownStructureContent
+	}
+
+	var depth int
+	var contentEnd int
+contentLoop:
+	for content < len(source) {
+		switch source[content] {
+		case '\n':
+			break contentLoop
+		case '(':
+			depth++
+		case ')':
+			depth--
+			if depth == 0 {
+				contentEnd = content
+				break contentLoop
+			}
+		}
+		content++
+	}
+
+	// We have reached the end of the line or the source with an invalid structure
+	if contentEnd < nameIdx {
+		return nil, 0, 0, ErrNotValidMarkdownStructureContent
+	}
+
+	return source[start+1 : nameIdx], nameIdx + 2, contentEnd, nil
 }
 
 func (p *Parser) parseImage() (Token, error) {
