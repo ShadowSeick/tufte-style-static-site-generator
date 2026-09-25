@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestGetContentFromBalnced(t *testing.T) {
+func TestGetContentFromBalanced(t *testing.T) {
 	tests := []struct {
 		name                 string
 		input                []byte
@@ -98,6 +98,53 @@ func TestGetContentFromBalnced(t *testing.T) {
 
 			if err != nil && !errors.Is(tt.err, err) {
 				t.Errorf("expected content balanced to be %s but got %s", tt.err, err)
+			}
+		})
+	}
+}
+
+func TestParseImage(t *testing.T) {
+	tests := []struct {
+		name          string
+		source        []byte
+		expectedToken Token
+		expectedErr   error
+	}{
+		{
+			name:   "correct link",
+			source: []byte("[correct link](https://example.com)"),
+			expectedToken: &Link{
+				baseToken: baseToken{
+					Content: Segment{
+						start: pos{
+							line:   0,
+							column: len("[correct link]("),
+							offset: len("[correct link]("),
+						},
+						end: pos{
+							line:   0,
+							column: len("https://example.com)"),
+							offset: len("https://example.com)"),
+						},
+					},
+				},
+				Name: []byte("correct link"),
+			},
+			expectedErr: nil,
+		},
+	}
+
+	var parser Parser
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			parser.Reset(tt.source)
+			token, err := parser.parseLink()
+			if err != nil && !errors.Is(tt.expectedErr, err) {
+				t.Errorf("expected error to be %s but got %s", tt.expectedErr, err)
+			}
+
+			if token.Start() != tt.expectedToken.Start() && token.End() != tt.expectedToken.End() {
+				t.Errorf("expected token to start in %d and end in %d but got start in %d and end in %d", tt.expectedToken.Start(), tt.expectedToken.End(), token.Start(), token.End())
 			}
 		})
 	}

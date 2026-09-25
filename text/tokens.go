@@ -27,7 +27,7 @@ var tokenString = [tokenTypeCount]string{
 	imageType:      "image",
 	inlineCodeType: "code",
 	blockCodeType:  "block code",
-	boldType:       "font_modifier",
+	boldType:       "bold",
 	italicType:     "italic",
 	jumpType:       "jump",
 	textType:       "text",
@@ -98,6 +98,39 @@ func (l Link) String() string {
 	return tokenString[linkType]
 }
 
+type Image struct {
+	baseToken
+	Caption []byte
+}
+
+func (i Image) String() string {
+	return tokenString[imageType]
+}
+
+type Bold struct {
+	baseToken
+}
+
+func (b Bold) String() string {
+	return tokenString[boldType]
+}
+
+type Italic struct {
+	baseToken
+}
+
+func (i Italic) String() string {
+	return tokenString[italicType]
+}
+
+type Jump struct {
+	baseToken
+}
+
+func (j Jump) String() string {
+	return tokenString[jumpType]
+}
+
 type Text struct {
 	baseToken
 }
@@ -112,14 +145,6 @@ type Subheader struct {
 
 func (sub Subheader) String() string {
 	return tokenString[subheaderType]
-}
-
-type Jump struct {
-	baseToken
-}
-
-func (j Jump) String() string {
-	return tokenString[jumpType]
 }
 
 type MarginNote struct {
