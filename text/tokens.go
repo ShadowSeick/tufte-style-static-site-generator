@@ -61,6 +61,7 @@ type Token interface {
 
 type CustomToken interface {
 	SetChildren(ts []Token)
+	GetChildren() []Token
 	Token
 }
 
@@ -160,6 +161,10 @@ func (mn *MarginNote) SetChildren(children []Token) {
 	mn.children = append(mn.children, children...)
 }
 
+func (mn MarginNote) GetChildren() []Token {
+	return mn.children
+}
+
 type SideNote struct {
 	baseToken
 	children []Token
@@ -171,4 +176,8 @@ func (sn SideNote) String() string {
 
 func (sn *SideNote) SetChildren(children []Token) {
 	sn.children = append(sn.children, children...)
+}
+
+func (sn SideNote) GetChildren() []Token {
+	return sn.children
 }

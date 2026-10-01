@@ -146,15 +146,16 @@ func (p *Parser) parseTitle() (Token, error) {
 	var level int
 	var start int
 	for start < maxLevel {
-		start++
-		b := p.peek(start)
-		if b == space {
-			break
-		} else if b == title {
+		if p.peek(start) == title {
 			level++
 		} else {
-			return nil, ErrTitleNotValid
+			break
 		}
+		start++
+	}
+
+	if p.peek(start) != space {
+		return p.parseText()
 	}
 
 	for range start + 1 {
@@ -265,7 +266,6 @@ func (p *Parser) parseLink() (Token, error) {
 		p.advance()
 	}
 
-	fmt.Println(string(link.Name))
 	p.setBalancedTokenSegment(link, start, end)
 	return link, nil
 }
@@ -295,40 +295,47 @@ func (p *Parser) parseCode() (Token, error) {
 // fontModifiers parses bold and italic fonts; only support * and **
 func (p *Parser) parseFontModifiers() (Token, error) {
 	var token Token
-	terminalChars := []byte{'*'}
-	if !p.isAtEOF() && p.source[p.offset+1] != fontModifiers {
+	terminalChars := 1
+	if p.peek(1) != fontModifiers {
 		token = &Bold{}
 	} else {
 		token = &Italic{}
-		terminalChars = append(terminalChars, '*')
+		terminalChars++
 	}
+	content := terminalChars
 
 	var curr byte
 	var segment Segment
-	segment.SetStart(p.line, p.column, p.offset)
-	for len(terminalChars) > 0 {
-		p.advance()
-		curr = p.source[p.offset]
+	var isNotValid bool
+	segment.SetStart(p.line, content, p.offset+content)
+	for i := 0; i < terminalChars; {
+		content++
 
-		if p.isAtEOF() {
+		if p.offset+content >= len(p.source) {
 			break
 		}
 
+		curr = p.peek(content)
+
 		if curr == '\n' {
+			isNotValid = true
 			break
 		}
 
 		if curr == fontModifiers {
-			terminalChars = terminalChars[:len(terminalChars)-1]
+			i++
 		}
 	}
 
-	// Not valid fontModifier
-	if len(terminalChars) > 0 {
+	if isNotValid {
 		return p.parseText()
 	}
 
-	segment.SetEnd(p.line, p.column, p.offset)
+	for range content {
+		p.advance()
+	}
+
+	segment.SetEnd(p.line, p.column, p.offset-(terminalChars-1))
 	token.SetSegment(segment)
 	return token, nil
 }
@@ -337,11 +344,8 @@ func (p *Parser) parseText() (Token, error) {
 	token := &Text{}
 	var segment Segment
 	segment.SetStart(p.line, p.column, p.offset)
-	for !slices.Contains([]byte{title, custom, link, code, image, fontModifiers, breakLine}, p.source[p.offset]) {
+	for p.offset+1 < len(p.source) && !p.isAtEOF() && !slices.Contains([]byte{title, custom, link, code, image, fontModifiers, breakLine}, p.peek(1)) {
 		p.advance()
-		if p.isAtEOF() {
-			break
-		}
 	}
 
 	segment.SetEnd(p.line, p.column, p.offset)
@@ -390,16 +394,22 @@ func getContentFromBalanced(start int, source []byte) ([]byte, int, int, error) 
 		return nil, 0, 0, nil
 	}
 
-	var content int
+	content := start
+	var depth int
 	var nameIdx int
 nameLoop:
 	for content < len(source) {
 		switch source[content] {
+		case '[':
+			depth++
 		case '\n':
 			break nameLoop
 		case ']':
-			nameIdx = content
-			break nameLoop
+			depth--
+			if depth == 0 {
+				nameIdx = content
+				break nameLoop
+			}
 		}
 		content++
 	}
@@ -415,7 +425,6 @@ nameLoop:
 		return nil, 0, 0, ErrNotValidMarkdownStructureContent
 	}
 
-	var depth int
 	var contentEnd int
 contentLoop:
 	for content < len(source) {
