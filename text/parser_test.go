@@ -3,7 +3,6 @@ package text
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"testing"
 )
 
@@ -113,61 +112,68 @@ func TestParseImage(t *testing.T) {
 	}{
 		{
 			name:   "correct image",
-			source: []byte("[caption here](articles/img/image.png)"),
+			source: []byte("![caption here](articles/img/image.png)"),
 			expectedToken: &Image{
 				baseToken: baseToken{
-					Content: Segment{
+					content: segment{
 						start: pos{
 							line:   0,
-							column: len("[caption here]("),
-							offset: len("[caption here]("),
+							column: len("![caption here]("),
+							offset: len("![caption here]("),
 						},
 						end: pos{
 							line:   0,
-							column: len("articles/img/image.png)"),
-							offset: len("articles/img/image.png)"),
+							column: len("![caption here](articles/img/image.png)"),
+							offset: len("![caption here](articles/img/image.png)"),
 						},
 					},
 				},
 				Caption: []byte("caption here"),
 			},
-			expectedErr: nil,
 		},
 		{
 			name:   "caption is always treat as text",
-			source: []byte("[[a link to someplace](https://jeje.com)](articles/img/article1.png)"),
+			source: []byte("![[a link to someplace](https://jeje.com)](articles/img/article1.png)"),
 			expectedToken: &Image{
 				baseToken: baseToken{
-					Content: Segment{
+					content: segment{
 						start: pos{
 							line:   0,
-							column: len("[[a link to someplace](https://jeje.com)]("),
-							offset: len("[[a link to someplace](https://jeje.com)]("),
+							column: len("![[a link to someplace](https://jeje.com)]("),
+							offset: len("![[a link to someplace](https://jeje.com)]("),
 						},
 						end: pos{
 							line:   0,
-							column: len("articles/img/article1.png)"),
-							offset: len("articles/img/article1.png)"),
+							column: len("![[a link to someplace](https://jeje.com)](articles/img/article1.png)"),
+							offset: len("![[a link to someplace](https://jeje.com)](articles/img/article1.png)"),
 						},
 					},
 				},
 				Caption: []byte("[a link to someplace](https://jeje.com)"),
 			},
-			expectedErr: nil,
 		},
 	}
 
 	var parser Parser
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			parser.Reset(tt.source)
-			token, err := parser.parseImage()
-			if err != nil && !errors.Is(tt.expectedErr, err) {
-				t.Errorf("expected error to be %s but got %s", tt.expectedErr, err)
+			parser.Reset()
+			tokens, errs := parser.Parse(tt.source)
+			if len(errs) != 0 && !errors.Is(tt.expectedErr, errs[0]) {
+				t.Errorf("expected error to be %s but got %s", tt.expectedErr, errs[0])
 			}
 
-			if token.Start() != tt.expectedToken.Start() && token.End() != tt.expectedToken.End() {
-				t.Errorf("expected token to start in %d and end in %d but got start in %d and end in %d", tt.expectedToken.Start(), tt.expectedToken.End(), token.Start(), token.End())
+			if len(tokens) != 1 {
+				t.Errorf("expected to have one token, but got %d instead", len(tokens))
+			}
+
+			switch v := tokens[0].(type) {
+			case *Image:
+				if v.Start() != tt.expectedToken.Start() && v.End() != tt.expectedToken.End() {
+					t.Errorf("expected token to start in %d and end in %d but got start in %d and end in %d", tt.expectedToken.Start(), tt.expectedToken.End(), v.Start(), v.End())
+				}
+			default:
+				t.Fatalf("expected to be an Image but got %s", v.String())
 			}
 		})
 	}
@@ -185,7 +191,7 @@ func TestParseLink(t *testing.T) {
 			source: []byte("[correct link](https://example.com)"),
 			expectedToken: &Link{
 				baseToken: baseToken{
-					Content: Segment{
+					content: segment{
 						start: pos{
 							line:   0,
 							column: len("[correct link]("),
@@ -193,8 +199,8 @@ func TestParseLink(t *testing.T) {
 						},
 						end: pos{
 							line:   0,
-							column: len("https://example.com)"),
-							offset: len("https://example.com)"),
+							column: len("[correct link](https://example.com)"),
+							offset: len("[correct link](https://example.com)"),
 						},
 					},
 				},
@@ -207,7 +213,7 @@ func TestParseLink(t *testing.T) {
 			source: []byte("[*something bold*](https://example.com)"),
 			expectedToken: &Link{
 				baseToken: baseToken{
-					Content: Segment{
+					content: segment{
 						start: pos{
 							line:   0,
 							column: len("[*something bold*]("),
@@ -229,14 +235,23 @@ func TestParseLink(t *testing.T) {
 	var parser Parser
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			parser.Reset(tt.source)
-			token, err := parser.parseLink()
-			if err != nil && !errors.Is(tt.expectedErr, err) {
-				t.Errorf("expected error to be %s but got %s", tt.expectedErr, err)
+			parser.Reset()
+			tokens, errs := parser.Parse(tt.source)
+			if len(errs) != 0 && !errors.Is(tt.expectedErr, errs[0]) {
+				t.Errorf("expected error to be %s but got %s", tt.expectedErr, errs[0])
 			}
 
-			if token.Start() != tt.expectedToken.Start() && token.End() != tt.expectedToken.End() {
-				t.Errorf("expected token to start in %d and end in %d but got start in %d and end in %d", tt.expectedToken.Start(), tt.expectedToken.End(), token.Start(), token.End())
+			if len(tokens) != 1 {
+				t.Errorf("expected to have one token, but got %d instead", len(tokens))
+			}
+
+			switch v := tokens[0].(type) {
+			case *Link:
+				if v.Start() != tt.expectedToken.Start() && v.End() != tt.expectedToken.End() {
+					t.Errorf("expected token to start in %d and end in %d but got start in %d and end in %d", tt.expectedToken.Start(), tt.expectedToken.End(), v.Start(), v.End())
+				}
+			default:
+				t.Fatalf("expected to be an Image but got %s", v.String())
 			}
 		})
 	}
@@ -254,7 +269,7 @@ func TestFontModifiers(t *testing.T) {
 			source: []byte("*bold*"),
 			expectedToken: &Bold{
 				baseToken: baseToken{
-					Content: Segment{
+					content: segment{
 						start: pos{
 							line:   0,
 							column: len("*"),
@@ -275,7 +290,7 @@ func TestFontModifiers(t *testing.T) {
 			source: []byte("**italic**"),
 			expectedToken: &Italic{
 				baseToken: baseToken{
-					Content: Segment{
+					content: segment{
 						start: pos{
 							line:   0,
 							column: len("**"),
@@ -296,14 +311,191 @@ func TestFontModifiers(t *testing.T) {
 	var parser Parser
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			parser.Reset(tt.source)
-			token, err := parser.parseFontModifiers()
-			if err != nil && !errors.Is(tt.expectedErr, err) {
-				t.Errorf("expected error to be %s but got %s", tt.expectedErr, err)
+			parser.Reset()
+			tokens, errs := parser.Parse(tt.source)
+			if len(errs) != 0 && !errors.Is(tt.expectedErr, errs[0]) {
+				t.Errorf("expected error to be %s but got %s", tt.expectedErr, errs[0])
 			}
 
-			if token.Start() != tt.expectedToken.Start() && token.End() != tt.expectedToken.End() {
-				t.Errorf("expected token to start in %d and end in %d but got start in %d and end in %d", tt.expectedToken.Start(), tt.expectedToken.End(), token.Start(), token.End())
+			if len(tokens) != 1 {
+				t.Errorf("expected to have one token, but got %d instead", len(tokens))
+			}
+
+			switch v := tokens[0].(type) {
+			case *Bold, *Italic:
+				if v.String() != tt.expectedToken.String() {
+					t.Errorf("expected token to be %s but got %s", tt.expectedToken.String(), v.String())
+				}
+
+				if v.Start() != tt.expectedToken.Start() && v.End() != tt.expectedToken.End() {
+					t.Errorf("expected token to start in %d and end in %d but got start in %d and end in %d", tt.expectedToken.Start(), tt.expectedToken.End(), v.Start(), v.End())
+				}
+			default:
+				t.Fatalf("expected to be an Image but got %s", v.String())
+			}
+		})
+	}
+}
+
+func TestParseHeader(t *testing.T) {
+	tests := []struct {
+		name          string
+		source        []byte
+		expectedToken Token
+		expectedErr   error
+	}{
+		{
+			name:   "correct header h1",
+			source: []byte("# Header\n"),
+			expectedToken: &Header{
+				baseToken: baseToken{
+					content: segment{
+						start: pos{
+							line:   0,
+							column: len("# "),
+							offset: len("# "),
+						},
+						end: pos{
+							line:   0,
+							column: len("# Header"),
+							offset: len("# Header"),
+						},
+					},
+				},
+				Level: 1,
+			},
+		},
+		{
+			name:   "correct header h2",
+			source: []byte("## Header\n"),
+			expectedToken: &Header{
+				baseToken: baseToken{
+					content: segment{
+						start: pos{
+							line:   0,
+							column: len("## "),
+							offset: len("## "),
+						},
+						end: pos{
+							line:   0,
+							column: len("## Header"),
+							offset: len("## Header"),
+						},
+					},
+				},
+				Level: 2,
+			},
+		},
+		{
+			name:   "incorrect header",
+			source: []byte("#Header\n"),
+			expectedToken: &Text{
+				baseToken: baseToken{
+					content: segment{
+						start: pos{
+							line:   0,
+							column: len(""),
+							offset: len(""),
+						},
+						end: pos{
+							line:   0,
+							column: len("#Header"),
+							offset: len("#Header"),
+						},
+					},
+				},
+			},
+			expectedErr: ErrHeaderNotValid,
+		},
+	}
+
+	var parser Parser
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			parser.Reset()
+			tokens, errs := parser.Parse(tt.source)
+			if len(errs) != 0 && !errors.Is(tt.expectedErr, errs[0]) {
+				t.Errorf("expected error to be %s but got %s", tt.expectedErr, errs[0])
+			}
+
+			if len(tokens) != 1 {
+				t.Errorf("expected to have one token, but got %d instead", len(tokens))
+			}
+
+			switch v := tokens[0].(type) {
+			case *Header:
+				expectedHeader := tt.expectedToken.(*Header)
+				if v.Level != expectedHeader.Level {
+					t.Errorf("expected header to have level %d but got %d", v.Level, expectedHeader.Level)
+				}
+
+				if v.Start() != tt.expectedToken.Start() && v.End() != tt.expectedToken.End() {
+					t.Errorf("expected token to start in %d and end in %d but got start in %d and end in %d", tt.expectedToken.Start(), tt.expectedToken.End(), v.Start(), v.End())
+				}
+			case *Text:
+				if v.Start() != tt.expectedToken.Start() && v.End() != tt.expectedToken.End() {
+					t.Errorf("expected token to start in %d and end in %d but got start in %d and end in %d", tt.expectedToken.Start(), tt.expectedToken.End(), v.Start(), v.End())
+				}
+			default:
+				t.Errorf("expecting token to be %s but got %s", tt.expectedToken.String(), v.String())
+			}
+		})
+	}
+}
+
+func TestParseSubheader(t *testing.T) {
+	tests := []struct {
+		name          string
+		source        []byte
+		expectedToken Token
+		expectedErr   error
+	}{
+		{
+			name:   "correct subheader",
+			source: []byte("?[^subheader](Subheader)"),
+			expectedToken: &Subheader{
+				baseToken: baseToken{
+					content: segment{
+						start: pos{
+							line:   0,
+							column: len("?[^subheader]("),
+							offset: len("?[^subheader]("),
+						},
+						end: pos{
+							line:   0,
+							column: len("?[^subheader](Subheader"),
+							offset: len("?[^subheader](Subheader"),
+						},
+					},
+				},
+			},
+		},
+	}
+
+	var parser Parser
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			parser.Reset()
+			tokens, errs := parser.Parse(tt.source)
+			if len(errs) != 0 && !errors.Is(tt.expectedErr, errs[0]) {
+				t.Errorf("expected error to be %s but got %s", tt.expectedErr, errs[0])
+			}
+
+			if len(tokens) != 1 {
+				t.Errorf("expected to have one token, but got %d instead", len(tokens))
+			}
+
+			switch v := tokens[0].(type) {
+			case *Subheader:
+				if v.Start() != tt.expectedToken.Start() && v.End() != tt.expectedToken.End() {
+					t.Errorf("expected token to start in %d and end in %d but got start in %d and end in %d", tt.expectedToken.Start(), tt.expectedToken.End(), v.Start(), v.End())
+				}
+			case *Text:
+				if v.Start() != tt.expectedToken.Start() && v.End() != tt.expectedToken.End() {
+					t.Errorf("expected token to start in %d and end in %d but got start in %d and end in %d", tt.expectedToken.Start(), tt.expectedToken.End(), v.Start(), v.End())
+				}
+			default:
+				t.Errorf("expecting token to be %s but got %s", tt.expectedToken.String(), v.String())
 			}
 		})
 	}
@@ -318,99 +510,99 @@ func TestParseMarginNote(t *testing.T) {
 	}{
 		{
 			name:   "correct margin note",
-			source: []byte("[^margin-note](*bold* but **italic** with a [link](https://example.com))"),
+			source: []byte("?[^margin-note](*bold* but **italic** with a [link](https://example.com))"),
 			expectedToken: &MarginNote{
 				baseToken: baseToken{
-					Content: Segment{
+					content: segment{
 						start: pos{
 							line:   0,
-							column: len("[^margin-note]("),
-							offset: len("[^margin-note]("),
+							column: len("?[^margin-note]("),
+							offset: len("?[^margin-note]("),
 						},
 						end: pos{
 							line:   0,
-							column: len(""),
-							offset: len("https://example.com)"),
+							column: len("?[^margin-note](*bold* but **italic** with a [link](https://example.com)"),
+							offset: len("?[^margin-note](*bold* but **italic** with a [link](https://example.com)"),
 						},
 					},
 				},
 				children: []Token{
 					&Bold{
 						baseToken: baseToken{
-							Content: Segment{
+							content: segment{
 								start: pos{
 									line:   0,
-									column: len("[^margin-note](*"),
-									offset: len("[^margin-note](*"),
+									column: len("?[^margin-note](*"),
+									offset: len("?[^margin-note](*"),
 								},
 								end: pos{
 									line:   0,
-									column: len("[^margin-note](*bold"),
-									offset: len("[^margin-note](*bold"),
+									column: len("?[^margin-note](*bold"),
+									offset: len("?[^margin-note](*bold"),
 								},
 							},
 						},
 					},
 					&Text{
 						baseToken: baseToken{
-							Content: Segment{
+							content: segment{
 								start: pos{
 									line:   0,
-									column: len("[^margin-note](*bold*"),
-									offset: len("[^margin-note](*bold*"),
+									column: len("?[^margin-note](*bold*"),
+									offset: len("?[^margin-note](*bold*"),
 								},
 								end: pos{
 									line:   0,
-									column: len("[^margin-note](*bold* but"),
-									offset: len("[^margin-note](*bold* but"),
+									column: len("?[^margin-note](*bold* but"),
+									offset: len("?[^margin-note](*bold* but"),
 								},
 							},
 						},
 					},
 					&Italic{
 						baseToken: baseToken{
-							Content: Segment{
+							content: segment{
 								start: pos{
 									line:   0,
-									column: len("[^margin-note](*bold* but **"),
-									offset: len("[^margin-note](*bold* but **"),
+									column: len("?[^margin-note](*bold* but **"),
+									offset: len("?[^margin-note](*bold* but **"),
 								},
 								end: pos{
 									line:   0,
-									column: len("[^margin-note](*bold* but **italic"),
-									offset: len("[^margin-note](*bold* but **italic"),
+									column: len("?[^margin-note](*bold* but **italic"),
+									offset: len("?[^margin-note](*bold* but **italic"),
 								},
 							},
 						},
 					},
 					&Text{
 						baseToken: baseToken{
-							Content: Segment{
+							content: segment{
 								start: pos{
 									line:   0,
-									column: len("[^margin-note](*bold* but **italic**"),
-									offset: len("[^margin-note](*bold* but **italic**"),
+									column: len("?[^margin-note](*bold* but **italic**"),
+									offset: len("?[^margin-note](*bold* but **italic**"),
 								},
 								end: pos{
 									line:   0,
-									column: len("[^margin-note](*bold* but **italic** with a"),
-									offset: len("[^margin-note](*bold* but **italic** with a"),
+									column: len("?[^margin-note](*bold* but **italic** with a"),
+									offset: len("?[^margin-note](*bold* but **italic** with a"),
 								},
 							},
 						},
 					},
 					&Link{
 						baseToken: baseToken{
-							Content: Segment{
+							content: segment{
 								start: pos{
 									line:   0,
-									column: len("[^margin-note](*bold* but **italic** with a [link]("),
-									offset: len("[^margin-note](*bold* but **italic** with a [link]("),
+									column: len("?[^margin-note](*bold* but **italic** with a [link]("),
+									offset: len("?[^margin-note](*bold* but **italic** with a [link]("),
 								},
 								end: pos{
 									line:   0,
-									column: len("[^margin-note](*bold* but **italic** with a [link](https://example.com"),
-									offset: len("[^margin-note](*bold* but **italic** with a [link](https://example.com"),
+									column: len("?[^margin-note](*bold* but **italic** with a [link](https://example.com"),
+									offset: len("?[^margin-note](*bold* but **italic** with a [link](https://example.com"),
 								},
 							},
 						},
@@ -424,25 +616,29 @@ func TestParseMarginNote(t *testing.T) {
 	var parser Parser
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			parser.Reset(tt.source)
-			token, err := parser.parseCustom()
-			if err != nil && !errors.Is(tt.expectedErr, err) {
-				t.Errorf("expected error to be %s but got %s", tt.expectedErr, err)
+			parser.Reset()
+			tokens, errs := parser.Parse(tt.source)
+			if len(errs) != 0 && !errors.Is(tt.expectedErr, errs[0]) {
+				t.Errorf("expected error to be %s but got %s", tt.expectedErr, errs[0])
 			}
 
-			if token.Start() != tt.expectedToken.Start() && token.End() != tt.expectedToken.End() {
-				t.Errorf("expected token to start in %d and end in %d but got start in %d and end in %d", tt.expectedToken.Start(), tt.expectedToken.End(), token.Start(), token.End())
+			if len(tokens) != 1 {
+				t.Errorf("expected to have one token, but got %d instead", len(tokens))
 			}
 
-			customToken, ok := token.(*MarginNote)
+			marginNote, ok := tokens[0].(*MarginNote)
 			if !ok {
-				t.Fatalf("it should be a Margin note: %s", err.Error())
+				t.Errorf("expected token to be %s but got %s", tt.expectedToken.String(), tokens[0].String())
+			}
+
+			if marginNote.String() != tt.expectedToken.String() {
+				t.Errorf("expected token to be %s but got %s", tt.expectedToken.String(), marginNote.String())
 			}
 
 			expectedChildren := tt.expectedToken.GetChildren()
-			children := customToken.GetChildren()
+			children := marginNote.GetChildren()
 			if len(children) != len(expectedChildren) {
-				t.Errorf("expected having %d children, instead got %d", len(expectedChildren), len(customToken.children))
+				t.Errorf("expected having %d children, instead got %d", len(expectedChildren), len(marginNote.children))
 			}
 
 			for i := 0; i < len(children); i++ {
@@ -453,6 +649,10 @@ func TestParseMarginNote(t *testing.T) {
 						"expected token %s and got %s;\n Expected to start in %d but started in %d; Expected to end in %d but ended in %d",
 						expectedChild.String(), child.String(), expectedChild.Start(), child.Start(), expectedChild.End(), child.End())
 				}
+			}
+
+			if marginNote.Start() != tt.expectedToken.Start() && marginNote.End() != tt.expectedToken.End() {
+				t.Errorf("expected token to start in %d and end in %d but got start in %d and end in %d", tt.expectedToken.Start(), tt.expectedToken.End(), marginNote.Start(), marginNote.End())
 			}
 		})
 	}
@@ -467,99 +667,99 @@ func TestParseSideNote(t *testing.T) {
 	}{
 		{
 			name:   "correct side note",
-			source: []byte("[^side-note](*bold* but **italic** with a [link](https://example.com))"),
+			source: []byte("?[^side-note](*bold* but **italic** with a [link](https://example.com))"),
 			expectedToken: &MarginNote{
 				baseToken: baseToken{
-					Content: Segment{
+					content: segment{
 						start: pos{
 							line:   0,
-							column: len("[^side-note]("),
-							offset: len("[^side-note]("),
+							column: len("?[^side-note]("),
+							offset: len("?[^side-note]("),
 						},
 						end: pos{
 							line:   0,
-							column: len(""),
-							offset: len("https://example.com)"),
+							column: len("?[^side-note](https://example.com)"),
+							offset: len("?[^side-note](https://example.com)"),
 						},
 					},
 				},
 				children: []Token{
 					&Bold{
 						baseToken: baseToken{
-							Content: Segment{
+							content: segment{
 								start: pos{
 									line:   0,
-									column: len("[^side-note](*"),
-									offset: len("[^side-note](*"),
+									column: len("?[^side-note](*"),
+									offset: len("?[^side-note](*"),
 								},
 								end: pos{
 									line:   0,
-									column: len("[^side-note](*bold"),
-									offset: len("[^side-note](*bold"),
+									column: len("?[^side-note](*bold"),
+									offset: len("?[^side-note](*bold"),
 								},
 							},
 						},
 					},
 					&Text{
 						baseToken: baseToken{
-							Content: Segment{
+							content: segment{
 								start: pos{
 									line:   0,
-									column: len("[^side-note](*bold*"),
-									offset: len("[^side-note](*bold*"),
+									column: len("?[^side-note](*bold*"),
+									offset: len("?[^side-note](*bold*"),
 								},
 								end: pos{
 									line:   0,
-									column: len("[^side-note](*bold* but"),
-									offset: len("[^side-note](*bold* but"),
+									column: len("?[^side-note](*bold* but"),
+									offset: len("?[^side-note](*bold* but"),
 								},
 							},
 						},
 					},
 					&Italic{
 						baseToken: baseToken{
-							Content: Segment{
+							content: segment{
 								start: pos{
 									line:   0,
-									column: len("[^side-note](*bold* but **"),
-									offset: len("[^side-note](*bold* but **"),
+									column: len("?[^side-note](*bold* but **"),
+									offset: len("?[^side-note](*bold* but **"),
 								},
 								end: pos{
 									line:   0,
-									column: len("[^side-note](*bold* but **italic"),
-									offset: len("[^side-note](*bold* but **italic"),
+									column: len("?[^side-note](*bold* but **italic"),
+									offset: len("?[^side-note](*bold* but **italic"),
 								},
 							},
 						},
 					},
 					&Text{
 						baseToken: baseToken{
-							Content: Segment{
+							content: segment{
 								start: pos{
 									line:   0,
-									column: len("[^side-note](*bold* but **italic**"),
-									offset: len("[^side-note](*bold* but **italic**"),
+									column: len("?[^side-note](*bold* but **italic**"),
+									offset: len("?[^side-note](*bold* but **italic**"),
 								},
 								end: pos{
 									line:   0,
-									column: len("[^side-note](*bold* but **italic** with a"),
-									offset: len("[^side-note](*bold* but **italic** with a"),
+									column: len("?[^side-note](*bold* but **italic** with a"),
+									offset: len("?[^side-note](*bold* but **italic** with a"),
 								},
 							},
 						},
 					},
 					&Link{
 						baseToken: baseToken{
-							Content: Segment{
+							content: segment{
 								start: pos{
 									line:   0,
-									column: len("[^side-note](*bold* but **italic** with a [link]("),
-									offset: len("[^side-note](*bold* but **italic** with a [link]("),
+									column: len("?[^side-note](*bold* but **italic** with a [link]("),
+									offset: len("?[^side-note](*bold* but **italic** with a [link]("),
 								},
 								end: pos{
 									line:   0,
-									column: len("[^side-note](*bold* but **italic** with a [link](https://example.com"),
-									offset: len("[^side-note](*bold* but **italic** with a [link](https://example.com"),
+									column: len("?[^side-note](*bold* but **italic** with a [link](https://example.com"),
+									offset: len("?[^side-note](*bold* but **italic** with a [link](https://example.com"),
 								},
 							},
 						},
@@ -573,25 +773,29 @@ func TestParseSideNote(t *testing.T) {
 	var parser Parser
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			parser.Reset(tt.source)
-			token, err := parser.parseCustom()
-			if err != nil && !errors.Is(tt.expectedErr, err) {
-				t.Errorf("expected error to be %s but got %s", tt.expectedErr, err)
+			parser.Reset()
+			tokens, errs := parser.Parse(tt.source)
+			if len(errs) != 0 && !errors.Is(tt.expectedErr, errs[0]) {
+				t.Errorf("expected error to be %s but got %s", tt.expectedErr, errs[0])
 			}
 
-			if token.Start() != tt.expectedToken.Start() && token.End() != tt.expectedToken.End() {
-				t.Errorf("expected token to start in %d and end in %d but got start in %d and end in %d", tt.expectedToken.Start(), tt.expectedToken.End(), token.Start(), token.End())
+			if len(tokens) != 1 {
+				t.Errorf("expected to have one token, but got %d instead", len(tokens))
 			}
 
-			customToken, ok := token.(*SideNote)
+			sideNote, ok := tokens[0].(*SideNote)
 			if !ok {
-				t.Fatalf("it should be a Side note: %s", err.Error())
+				t.Errorf("expected token to be %s but got %s", tt.expectedToken.String(), tokens[0].String())
+			}
+
+			if sideNote.String() != tt.expectedToken.String() {
+				t.Errorf("expected token to be %s but got %s", tt.expectedToken.String(), sideNote.String())
 			}
 
 			expectedChildren := tt.expectedToken.GetChildren()
-			children := customToken.GetChildren()
+			children := sideNote.GetChildren()
 			if len(children) != len(expectedChildren) {
-				t.Errorf("expected having %d children, instead got %d", len(expectedChildren), len(customToken.children))
+				t.Errorf("expected having %d children, instead got %d", len(expectedChildren), len(sideNote.children))
 			}
 
 			for i := 0; i < len(children); i++ {
@@ -603,110 +807,9 @@ func TestParseSideNote(t *testing.T) {
 						expectedChild.String(), child.String(), expectedChild.Start(), child.Start(), expectedChild.End(), child.End())
 				}
 			}
-		})
-	}
-}
 
-func TestParseTitle(t *testing.T) {
-	tests := []struct {
-		name          string
-		source        []byte
-		expectedToken Token
-		expectedErr   error
-	}{
-		{
-			name:   "correct title h1",
-			source: []byte("# Title"),
-			expectedToken: &Header{
-				baseToken: baseToken{
-					Content: Segment{
-						start: pos{
-							line:   0,
-							column: len("# "),
-							offset: len("# "),
-						},
-						end: pos{
-							line:   0,
-							column: len("# Title"),
-							offset: len("# Title"),
-						},
-					},
-				},
-				Level: 1,
-			},
-		},
-		{
-			name:   "correct title h2",
-			source: []byte("## Title"),
-			expectedToken: &Header{
-				baseToken: baseToken{
-					Content: Segment{
-						start: pos{
-							line:   0,
-							column: len("## "),
-							offset: len("## "),
-						},
-						end: pos{
-							line:   0,
-							column: len("## Title"),
-							offset: len("## Title"),
-						},
-					},
-				},
-				Level: 2,
-			},
-		},
-		{
-			name:   "incorrect title",
-			source: []byte("#Title\n"),
-			expectedToken: &Text{
-				baseToken: baseToken{
-					Content: Segment{
-						start: pos{
-							line:   0,
-							column: len(""),
-							offset: len(""),
-						},
-						end: pos{
-							line:   0,
-							column: len("#Title"),
-							offset: len("#Title"),
-						},
-					},
-				},
-			},
-		},
-	}
-
-	var parser Parser
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			parser.Reset(tt.source)
-			token, err := parser.parseTitle()
-			fmt.Printf(
-				"expected token to start in %d and end in %d but got start in %d and end in %d\n", tt.expectedToken.Start(), tt.expectedToken.End(), token.Start(), token.End(),
-			)
-			if err != nil && !errors.Is(tt.expectedErr, err) {
-				t.Errorf("expected error to be %s but got %s", tt.expectedErr, err)
-			}
-
-			if token.String() != tt.expectedToken.String() {
-				t.Errorf("expected token %s, but got %s", tt.expectedToken.String(), token.String())
-			}
-
-			if token.Start() != tt.expectedToken.Start() && token.End() != tt.expectedToken.End() {
-				t.Errorf("expected token to start in %d and end in %d but got start in %d and end in %d", tt.expectedToken.Start(), tt.expectedToken.End(), token.Start(), token.End())
-			}
-
-			switch v := token.(type) {
-			case *Header:
-				expected, ok := tt.expectedToken.(*Header)
-				if !ok {
-					t.Fatalf("token not expected")
-				}
-				if v.Level != expected.Level {
-					t.Errorf("expected token level to be %d but got %d", expected.Level, v.Level)
-				}
+			if sideNote.Start() != tt.expectedToken.Start() && sideNote.End() != tt.expectedToken.End() {
+				t.Errorf("expected token to start in %d and end in %d but got start in %d and end in %d", tt.expectedToken.Start(), tt.expectedToken.End(), sideNote.Start(), sideNote.End())
 			}
 		})
 	}

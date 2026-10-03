@@ -21,8 +21,8 @@ const (
 var tokenString = [tokenTypeCount]string{
 	headerType:     "header",
 	subheaderType:  "subheader",
-	marginNoteType: "note",
-	sideNoteType:   "note",
+	marginNoteType: "margin note",
+	sideNoteType:   "side note",
 	linkType:       "link",
 	imageType:      "image",
 	inlineCodeType: "code",
@@ -39,21 +39,13 @@ type pos struct {
 	offset int
 }
 
-type Segment struct {
+type segment struct {
 	start pos
 	end   pos
 }
 
-func (s *Segment) SetStart(line, column, offset int) {
-	s.start = pos{line: line, column: column, offset: offset}
-}
-
-func (s *Segment) SetEnd(line, column, offset int) {
-	s.end = pos{line: line, column: column, offset: offset}
-}
-
 type Token interface {
-	SetSegment(s Segment)
+	SetContent(start pos, end pos)
 	String() string
 	Start() int
 	End() int
@@ -66,19 +58,22 @@ type CustomToken interface {
 }
 
 type baseToken struct {
-	Content Segment
+	content segment
 }
 
-func (b *baseToken) SetSegment(s Segment) {
-	b.Content = s
+func (b *baseToken) SetContent(start pos, end pos) {
+	b.content = segment{
+		start: start,
+		end:   end,
+	}
 }
 
 func (b baseToken) Start() int {
-	return b.Content.start.offset
+	return b.content.start.offset
 }
 
 func (b baseToken) End() int {
-	return b.Content.end.offset
+	return b.content.end.offset
 }
 
 type Header struct {

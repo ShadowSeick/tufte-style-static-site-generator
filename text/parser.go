@@ -7,14 +7,16 @@ import (
 )
 
 var (
-	ErrTitleNotValid                    = errors.New("not valid title")
+	ErrHeaderNotValid                   = errors.New("not valid header")
+	ErrFontModifiersNotValid            = errors.New("not valid font modifiers")
+	ErrImageNotValid                    = errors.New("not valid image")
+	ErrLinkNotValid                     = errors.New("not valid link")
+	ErrNotValidMarkdown                 = errors.New("not valid markdown")
 	ErrCustomMarkdownNotValid           = errors.New("not valid custom markdown")
 	ErrMarkdownTypeNotImplemented       = errors.New("markdown type not implemented")
 	ErrNotValidMarkdownStructureName    = errors.New("not valid markdown balanced structure []() name")
 	ErrNotValidMarkdownStructureContent = errors.New("not valid markdown balanced structure []() content")
 )
-
-// TODO: I need to implement image, code and font modifiers
 
 const (
 	title         = '#'
@@ -39,95 +41,207 @@ type Parser struct {
 	line   int
 }
 
-func (p *Parser) Reset(source []byte) {
-	p.source = source
+func (p *Parser) Reset() {
 	p.offset = 0
 	p.column = 0
 	p.line = 0
 }
 
-func (p *Parser) Parse() ([]Token, []error) {
+// Parse can be much simpler. For more information why http://number-none.com/blow/blog/programming/2014/09/26/carmack-on-inlined-code.html
+// - I am duplicating a lot of variables and logic
+// - It needs a lot of implicit knowledge
+// - Not really straightforward
+// - A lot of jumping
+//
+// One example is that I am using parseChildren to get the tokens from it, it is not necessary, I can use a parse function that accepts a source in bytes
+// Once I have this, I can recursively call it to parse the children for a specific part of the source
+// There are many like that, but mostly is the tendency of overusing parseText and adding the same logic many times
+//
+// After the tests have been done, I will refactor heavily to make it smaller, simpler and more maintainable
+func (p *Parser) Parse(source []byte) ([]Token, []error) {
 	var errs []error
 	var tokens []Token
-	var curr byte
-	for p.offset < len(p.source) {
-		// We are at the start of the line;
-		// Test for header or subheader
-		curr = p.source[p.offset]
-		if p.column == 0 {
-			switch curr {
-			case title:
-				t, err := p.parseTitle()
-				if t != nil {
-					tokens = append(tokens, t)
-				}
-				if err != nil {
-					errs = append(errs, err)
-				}
-
-			case custom:
-				t, err := p.parseCustom()
-				if t != nil {
-					tokens = append(tokens, t)
-				}
-				if err != nil {
-					errs = append(errs, err)
-				}
+	var content int
+	var token Token
+	var err error
+	for p.offset < len(source) {
+	out:
+		switch source[p.offset] {
+		case title:
+			if p.column != 0 {
+				break
 			}
-		}
+			const maxLevel = 2
+			var level int
+			for content < maxLevel {
+				if p.peek(source, content) == title {
+					level++
+				} else {
+					break
+				}
+				content++
+			}
 
-		switch curr {
+			if p.peek(source, content) != space {
+				err = ErrHeaderNotValid
+				break
+			}
+
+			content++ // Content starts after space
+			for range content {
+				p.advance()
+			}
+
+			token = &Header{
+				Level: level,
+			}
+
+			for source[content] != breakLine {
+				content++
+			}
 		case custom:
-			t, err := p.parseCustom()
-			if t != nil {
-				tokens = append(tokens, t)
+			identifier, start, end, balancedErr := getContentFromBalanced(p.offset+1, source)
+			if balancedErr != nil {
+				err = fmt.Errorf("%w: %w", ErrCustomMarkdownNotValid, balancedErr)
+				break
 			}
-			if err != nil {
-				errs = append(errs, err)
+
+			var customToken CustomToken
+			id := string(identifier)
+			switch id {
+			case subheaderIdentifier:
+				token = &Subheader{}
+			case marginNoteIdentifier:
+				customToken = &MarginNote{}
+			case sideNoteIdentifier:
+				customToken = &SideNote{}
+			default:
+				err = ErrCustomMarkdownNotValid
+				break out
+			}
+
+			// Go to the start of the content
+			for range start {
+				p.advance()
+			}
+
+			content = end - start
+			if customToken != nil {
+				children, childErrs := p.Parse(source[p.offset : p.offset+content])
+				if len(childErrs) != 0 {
+					for _, childErr := range childErrs {
+						errs = append(errs, fmt.Errorf("%w: %w", err, childErr))
+					}
+				}
+				customToken.SetChildren(children)
+				token = customToken
 			}
 		case link:
-			t, err := p.parseLink()
-			if t != nil {
-				tokens = append(tokens, t)
+			name, start, end, balancedErr := getContentFromBalanced(p.offset, source)
+			if balancedErr != nil {
+				err = fmt.Errorf("%w: %w", ErrLinkNotValid, balancedErr)
+				break
 			}
-			if err != nil {
-				errs = append(errs, err)
+
+			token = &Link{
+				Name: name,
 			}
+
+			for range start + 1 {
+				p.advance()
+			}
+
+			content = end - start
 		case image:
-			t, err := p.parseImage()
-			if t != nil {
-				tokens = append(tokens, t)
+			caption, start, end, balancedErr := getContentFromBalanced(p.offset+1, source)
+			if balancedErr != nil {
+				err = fmt.Errorf("%w: %w", ErrImageNotValid, balancedErr)
+				break
 			}
-			if err != nil {
-				errs = append(errs, err)
+
+			token = &Image{
+				Caption: caption,
 			}
+
+			for range start + 1 {
+				p.advance()
+			}
+
+			content = end - start
 		case code:
 			// Parse code
 		case fontModifiers:
-			t, err := p.parseFontModifiers()
-			if t != nil {
-				tokens = append(tokens, t)
+			terminalChars := 1
+			if p.peek(source, 1) != fontModifiers {
+				token = &Bold{}
+			} else {
+				token = &Italic{}
+				terminalChars++
 			}
-			if err != nil {
-				errs = append(errs, err)
+			content = terminalChars
+
+			for range content {
+				p.advance()
 			}
+
+			for i := 0; i < terminalChars; {
+				content++
+
+				if isAtEOF(source, p.offset+content) {
+					break
+				}
+
+				if p.peek(source, content) == '\n' {
+					err = ErrFontModifiersNotValid
+					break out
+				}
+
+				if p.peek(source, content) == fontModifiers {
+					i++
+				}
+			}
+
 		case breakLine:
-			tokens = append(tokens, &Jump{})
+			token = &Jump{}
 			p.line++
 			p.column = 0
 		default:
-			t, err := p.parseText()
-			if t != nil {
-				tokens = append(tokens, t)
-			}
-			if err != nil {
-				errs = append(errs, err)
+			err = ErrNotValidMarkdown
+		}
+
+		if err != nil {
+			errs = append(errs, err)
+			token = &Text{}
+			for !isAtEOF(source, p.offset+content) && !slices.Contains([]byte{title, custom, link, code, image, fontModifiers, breakLine}, p.peek(source, content)) {
+				content++
 			}
 		}
 
-		if !p.isAtEOF() {
+		token.SetContent(pos{
+			line:   p.line,
+			column: p.column,
+			offset: p.offset,
+		}, pos{
+			line:   p.line,
+			column: p.column + content,
+			offset: p.offset + content,
+		})
+
+		tokens = append(tokens, token)
+
+		// Advance the content to the last byte from the token content
+		for range content {
 			p.advance()
 		}
+
+		// Go to the next byte
+		if !isAtEOF(source, p.offset) {
+			p.advance()
+		}
+
+		content = 0
+		token = nil
+		err = nil
 	}
 	return tokens, errs
 }
@@ -137,251 +251,12 @@ func (p *Parser) advance() {
 	p.column++
 }
 
-func (p *Parser) peek(n int) byte {
-	return p.source[p.offset+n]
+func (p *Parser) peek(source []byte, n int) byte {
+	return source[p.offset+n]
 }
 
-func (p *Parser) parseTitle() (Token, error) {
-	const maxLevel = 2
-	var level int
-	var start int
-	for start < maxLevel {
-		if p.peek(start) == title {
-			level++
-		} else {
-			break
-		}
-		start++
-	}
-
-	if p.peek(start) != space {
-		return p.parseText()
-	}
-
-	for range start + 1 {
-		p.advance()
-	}
-
-	token := &Header{
-		Level: level,
-	}
-	p.setSegment(token, breakLine)
-
-	return token, nil
-}
-
-func (p *Parser) parseCustom() (Token, error) {
-	identifier, start, end, err := getContentFromBalanced(p.offset, p.source)
-	if err != nil {
-		return p.parseText()
-	}
-
-	for range start {
-		p.advance()
-	}
-
-	var token Token
-	id := string(identifier)
-	switch id {
-	case subheaderIdentifier:
-		token = &Subheader{}
-	case marginNoteIdentifier:
-		token, err = p.parseChildren(&MarginNote{}, end)
-	case sideNoteIdentifier:
-		token, err = p.parseChildren(&SideNote{}, end)
-	default:
-		// It is not a custom token; this shouldn't occur
-		panic(ErrCustomMarkdownNotValid.Error())
-	}
-
-	p.setBalancedTokenSegment(token, start, end)
-	return token, err
-}
-
-func (p *Parser) parseChildren(token CustomToken, end int) (Token, error) {
-	var errs []error
-	var tokens []Token
-	for p.offset < end {
-		switch p.source[p.offset] {
-		case link:
-			t, err := p.parseLink()
-			if t != nil {
-				tokens = append(tokens, t)
-			}
-			if err != nil {
-				errs = append(errs, err)
-			}
-		case image:
-			t, err := p.parseImage()
-			if t != nil {
-				tokens = append(tokens, t)
-			}
-			if err != nil {
-				errs = append(errs, err)
-			}
-		case code:
-			// Parse code
-		case fontModifiers:
-			t, err := p.parseFontModifiers()
-			if t != nil {
-				tokens = append(tokens, t)
-			}
-			if err != nil {
-				errs = append(errs, err)
-			}
-		default:
-			t, err := p.parseText()
-			if t != nil {
-				tokens = append(tokens, t)
-			}
-			if err != nil {
-				errs = append(errs, err)
-			}
-		}
-
-		if !p.isAtEOF() {
-			p.advance()
-		}
-	}
-	var err error
-	for _, e := range errs {
-		err = fmt.Errorf("%w: %w", err, e)
-	}
-
-	token.SetChildren(tokens)
-	return token, err
-}
-
-func (p *Parser) parseLink() (Token, error) {
-	name, start, end, err := getContentFromBalanced(p.offset, p.source)
-	if err != nil {
-		return p.parseText()
-	}
-
-	link := &Link{
-		Name: name,
-	}
-
-	for range start {
-		p.advance()
-	}
-
-	p.setBalancedTokenSegment(link, start, end)
-	return link, nil
-}
-
-func (p *Parser) parseImage() (Token, error) {
-	caption, start, end, err := getContentFromBalanced(p.offset, p.source)
-	if err != nil {
-		return p.parseText()
-	}
-
-	image := &Image{
-		Caption: caption,
-	}
-
-	for range start {
-		p.advance()
-	}
-
-	p.setBalancedTokenSegment(image, start, end)
-	return image, nil
-}
-
-func (p *Parser) parseCode() (Token, error) {
-	return nil, nil
-}
-
-// fontModifiers parses bold and italic fonts; only support * and **
-func (p *Parser) parseFontModifiers() (Token, error) {
-	var token Token
-	terminalChars := 1
-	if p.peek(1) != fontModifiers {
-		token = &Bold{}
-	} else {
-		token = &Italic{}
-		terminalChars++
-	}
-	content := terminalChars
-
-	var curr byte
-	var segment Segment
-	var isNotValid bool
-	segment.SetStart(p.line, content, p.offset+content)
-	for i := 0; i < terminalChars; {
-		content++
-
-		if p.offset+content >= len(p.source) {
-			break
-		}
-
-		curr = p.peek(content)
-
-		if curr == '\n' {
-			isNotValid = true
-			break
-		}
-
-		if curr == fontModifiers {
-			i++
-		}
-	}
-
-	if isNotValid {
-		return p.parseText()
-	}
-
-	for range content {
-		p.advance()
-	}
-
-	segment.SetEnd(p.line, p.column, p.offset-(terminalChars-1))
-	token.SetSegment(segment)
-	return token, nil
-}
-
-func (p *Parser) parseText() (Token, error) {
-	token := &Text{}
-	var segment Segment
-	segment.SetStart(p.line, p.column, p.offset)
-	for p.offset+1 < len(p.source) && !p.isAtEOF() && !slices.Contains([]byte{title, custom, link, code, image, fontModifiers, breakLine}, p.peek(1)) {
-		p.advance()
-	}
-
-	segment.SetEnd(p.line, p.column, p.offset)
-	token.SetSegment(segment)
-	return token, nil
-}
-
-func (p *Parser) setSegment(token Token, terminalChar byte) {
-	var segment Segment
-	segment.SetStart(p.line, p.column, p.offset)
-	for p.source[p.offset] != terminalChar {
-		p.advance()
-		if p.isAtEOF() {
-			break
-		}
-	}
-
-	segment.SetEnd(p.line, p.column, p.offset)
-	token.SetSegment(segment)
-}
-
-func (p *Parser) isAtEOF() bool {
-	return p.offset >= len(p.source)
-}
-
-func (p *Parser) setBalancedTokenSegment(token Token, start, end int) {
-	var segment Segment
-	// I don't know in which column is it; for now I will set it as the same of offset
-	// TODO: This needs to change to show proper errors
-	segment.SetStart(p.line, start, start)
-	segment.SetEnd(p.line, end, end)
-	for range end - start {
-		p.advance()
-	}
-
-	token.SetSegment(segment)
+func isAtEOF(source []byte, count int) bool {
+	return count >= len(source)
 }
 
 // getContentFromBalanced expects the start idx of the markdown structure and the markdown source in bytes array
@@ -394,7 +269,7 @@ func getContentFromBalanced(start int, source []byte) ([]byte, int, int, error) 
 		return nil, 0, 0, nil
 	}
 
-	content := start
+	var content int
 	var depth int
 	var nameIdx int
 nameLoop:
