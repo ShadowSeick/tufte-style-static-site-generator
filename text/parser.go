@@ -64,6 +64,7 @@ func (p *Parser) Parse(source []byte) ([]Token, []error) {
 	var content int
 	var token Token
 	var err error
+	var childParser Parser
 	for p.offset < len(source) {
 	out:
 		switch source[p.offset] {
@@ -121,16 +122,27 @@ func (p *Parser) Parse(source []byte) ([]Token, []error) {
 			}
 
 			// Go to the start of the content
-			for range start {
+			for range start - p.offset {
 				p.advance()
 			}
 
 			content = end - start
 			if customToken != nil {
-				children, childErrs := p.Parse(source[p.offset : p.offset+content])
+				// We use the childParser to not affect the current one.
+				// Surely there is a better way, but for now it will be enough
+				// TODO: Make proper recursive call
+				childParser.Reset()
+				childParser.offset = p.offset
+				childParser.column = p.column
+				childParser.line = p.line
+				children, childErrs := childParser.Parse(source[:p.offset+content])
 				if len(childErrs) != 0 {
 					for _, childErr := range childErrs {
-						errs = append(errs, fmt.Errorf("%w: %w", err, childErr))
+						if err == nil {
+							errs = append(errs, childErr)
+						} else {
+							errs = append(errs, fmt.Errorf("%w: %w", err, childErr))
+						}
 					}
 				}
 				customToken.SetChildren(children)
@@ -147,7 +159,7 @@ func (p *Parser) Parse(source []byte) ([]Token, []error) {
 				Name: name,
 			}
 
-			for range start + 1 {
+			for range start - p.offset {
 				p.advance()
 			}
 
@@ -163,12 +175,13 @@ func (p *Parser) Parse(source []byte) ([]Token, []error) {
 				Caption: caption,
 			}
 
-			for range start + 1 {
+			for range start - p.offset {
 				p.advance()
 			}
 
 			content = end - start
 		case code:
+			// TODO: JUST DO IT!
 			// Parse code
 		case fontModifiers:
 			terminalChars := 1
@@ -188,6 +201,7 @@ func (p *Parser) Parse(source []byte) ([]Token, []error) {
 				content++
 
 				if isAtEOF(source, p.offset+content) {
+					err = ErrFontModifiersNotValid
 					break
 				}
 
@@ -200,7 +214,6 @@ func (p *Parser) Parse(source []byte) ([]Token, []error) {
 					i++
 				}
 			}
-
 		case breakLine:
 			token = &Jump{}
 			p.line++
@@ -212,7 +225,7 @@ func (p *Parser) Parse(source []byte) ([]Token, []error) {
 		if err != nil {
 			errs = append(errs, err)
 			token = &Text{}
-			for !isAtEOF(source, p.offset+content) && !slices.Contains([]byte{title, custom, link, code, image, fontModifiers, breakLine}, p.peek(source, content)) {
+			for !isAtEOF(source, p.offset+content+1) && !slices.Contains([]byte{title, custom, link, code, image, fontModifiers, breakLine}, p.peek(source, content+1)) {
 				content++
 			}
 		}
@@ -269,7 +282,7 @@ func getContentFromBalanced(start int, source []byte) ([]byte, int, int, error) 
 		return nil, 0, 0, nil
 	}
 
-	var content int
+	content := start
 	var depth int
 	var nameIdx int
 nameLoop:

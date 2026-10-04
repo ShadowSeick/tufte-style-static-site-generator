@@ -257,7 +257,7 @@ func TestParseLink(t *testing.T) {
 	}
 }
 
-func TestFontModifiers(t *testing.T) {
+func TestParseFontModifiers(t *testing.T) {
 	tests := []struct {
 		name          string
 		source        []byte
@@ -388,7 +388,7 @@ func TestParseHeader(t *testing.T) {
 		},
 		{
 			name:   "incorrect header",
-			source: []byte("#Header\n"),
+			source: []byte("#Header"),
 			expectedToken: &Text{
 				baseToken: baseToken{
 					content: segment{
@@ -501,6 +501,61 @@ func TestParseSubheader(t *testing.T) {
 	}
 }
 
+func TestParseText(t *testing.T) {
+	tests := []struct {
+		name          string
+		source        []byte
+		expectedToken Token
+		expectedErr   error
+	}{
+		{
+			name:   "simple text",
+			source: []byte("this is just text"),
+			expectedToken: &Text{
+				baseToken: baseToken{
+					content: segment{
+						start: pos{
+							line:   0,
+							column: 0,
+							offset: 0,
+						},
+						end: pos{
+							line:   0,
+							column: len("this is just text"),
+							offset: len("this is just text"),
+						},
+					},
+				},
+			},
+			expectedErr: ErrNotValidMarkdown,
+		},
+	}
+
+	var parser Parser
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			parser.Reset()
+			tokens, errs := parser.Parse(tt.source)
+			if len(errs) != 0 && !errors.Is(tt.expectedErr, errs[0]) {
+				t.Errorf("expected error to be %s but got %s", tt.expectedErr, errs[0])
+			}
+
+			if len(tokens) != 1 {
+				t.Errorf("expected to have one token, but got %d instead", len(tokens))
+			}
+
+			text, ok := tokens[0].(*Text)
+			if !ok {
+				t.Errorf("expecting token to be %s but got %s", tt.expectedToken.String(), text.String())
+			}
+
+			if text.Start() != tt.expectedToken.Start() && text.End() != tt.expectedToken.End() {
+				t.Errorf("expected token to start in %d and end in %d but got start in %d and end in %d", tt.expectedToken.Start(), tt.expectedToken.End(), text.Start(), text.End())
+			}
+		})
+	}
+}
+
 func TestParseMarginNote(t *testing.T) {
 	tests := []struct {
 		name          string
@@ -553,8 +608,8 @@ func TestParseMarginNote(t *testing.T) {
 								},
 								end: pos{
 									line:   0,
-									column: len("?[^margin-note](*bold* but"),
-									offset: len("?[^margin-note](*bold* but"),
+									column: len("?[^margin-note](*bold* but "),
+									offset: len("?[^margin-note](*bold* but "),
 								},
 							},
 						},
@@ -609,7 +664,7 @@ func TestParseMarginNote(t *testing.T) {
 					},
 				},
 			},
-			expectedErr: nil,
+			expectedErr: ErrNotValidMarkdown,
 		},
 	}
 
@@ -644,6 +699,10 @@ func TestParseMarginNote(t *testing.T) {
 			for i := 0; i < len(children); i++ {
 				child := children[i]
 				expectedChild := expectedChildren[i]
+				if child.String() != expectedChild.String() {
+					t.Errorf("expected token to be %s, but got %s", expectedChild.String(), child.String())
+				}
+
 				if child.Start() != expectedChild.Start() && child.End() != expectedChild.End() {
 					t.Errorf(
 						"expected token %s and got %s;\n Expected to start in %d but started in %d; Expected to end in %d but ended in %d",
@@ -668,7 +727,7 @@ func TestParseSideNote(t *testing.T) {
 		{
 			name:   "correct side note",
 			source: []byte("?[^side-note](*bold* but **italic** with a [link](https://example.com))"),
-			expectedToken: &MarginNote{
+			expectedToken: &SideNote{
 				baseToken: baseToken{
 					content: segment{
 						start: pos{
@@ -766,7 +825,7 @@ func TestParseSideNote(t *testing.T) {
 					},
 				},
 			},
-			expectedErr: nil,
+			expectedErr: ErrNotValidMarkdown,
 		},
 	}
 
@@ -801,6 +860,9 @@ func TestParseSideNote(t *testing.T) {
 			for i := 0; i < len(children); i++ {
 				child := children[i]
 				expectedChild := expectedChildren[i]
+				if child.String() != expectedChild.String() {
+					t.Errorf("expected token to be %s, but got %s", expectedChild.String(), child.String())
+				}
 				if child.Start() != expectedChild.Start() && child.End() != expectedChild.End() {
 					t.Errorf(
 						"expected token %s and got %s;\n Expected to start in %d but started in %d; Expected to end in %d but ended in %d",
