@@ -3,8 +3,418 @@ package text
 import (
 	"bytes"
 	"errors"
+	"os"
+	"path/filepath"
 	"testing"
 )
+
+// TODO: Make a proper text to be parsed as expected at the end of it all
+func TestParse(t *testing.T) {
+	var parser Parser
+	// Get the fiel
+	filePath := filepath.Join("data", "testdata.md")
+	source, err := os.ReadFile(filePath)
+	if err != nil {
+		t.Fatalf("Failed to read file %s: %v", filePath, err)
+	}
+
+	expectedTokens := []Token{
+		&Header{
+			baseToken: baseToken{
+				content: segment{
+					start: pos{
+						line:   0,
+						column: len("# "),
+						offset: len("# "),
+					},
+					end: pos{
+						line:   0,
+						column: len("# Title"),
+						offset: len("# Title"),
+					},
+				},
+			},
+			Level: 1,
+		},
+		&Jump{
+			baseToken: baseToken{
+				content: segment{
+					start: pos{
+						line:   0,
+						column: len("# Title\n"),
+						offset: len("# Title\n"),
+					},
+					end: pos{
+						line:   0,
+						column: len("# Title\n?"),
+						offset: len("# Title\n?"),
+					},
+				},
+			},
+		},
+		&Subheader{
+			baseToken: baseToken{
+				content: segment{
+					start: pos{
+						line:   0,
+						column: len("# Title\n?[^subheader]("),
+						offset: len("# Title\n?[^subheader]("),
+					},
+					end: pos{
+						line:   0,
+						column: len("# Title\n?[^subheader](Subheader"),
+						offset: len("# Title\n?[^subheader](Subheader"),
+					},
+				},
+			},
+		},
+		&Jump{
+			baseToken: baseToken{
+				content: segment{
+					start: pos{
+						line:   0,
+						column: len("# Title\n?[^subheader](Subheader)"),
+						offset: len("# Title\n?[^subheader](Subheader)"),
+					},
+					end: pos{
+						line:   0,
+						column: len("# Title\n?[^subheader](Subheader)\n"),
+						offset: len("# Title\n?[^subheader](Subheader)\n"),
+					},
+				},
+			},
+		},
+		&Text{
+			baseToken: baseToken{
+				content: segment{
+					start: pos{
+						line:   0,
+						column: len("# Title\n?[^subheader](Subheader)\n"),
+						offset: len("# Title\n?[^subheader](Subheader)\n"),
+					},
+					end: pos{
+						line:   0,
+						column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff"),
+						offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff"),
+					},
+				},
+			},
+		},
+		&Jump{
+			baseToken: baseToken{
+				content: segment{
+					start: pos{
+						line:   0,
+						column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff"),
+						offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff"),
+					},
+					end: pos{
+						line:   0,
+						column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\n"),
+						offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\n"),
+					},
+				},
+			},
+		},
+		&Text{
+			baseToken: baseToken{
+				content: segment{
+					start: pos{
+						line:   0,
+						column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\n"),
+						offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\n"),
+					},
+					end: pos{
+						line:   0,
+						column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here "),
+						offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here "),
+					},
+				},
+			},
+		},
+		&Link{
+			baseToken: baseToken{
+				content: segment{
+					start: pos{
+						line:   0,
+						column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link]("),
+						offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link]("),
+					},
+					end: pos{
+						line:   0,
+						column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com"),
+						offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com"),
+					},
+				},
+			},
+			Name: []byte("link"),
+		},
+		&Text{
+			baseToken: baseToken{
+				content: segment{
+					start: pos{
+						line:   0,
+						column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com)"),
+						offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com)"),
+					},
+					end: pos{
+						line:   0,
+						column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note"),
+						offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note"),
+					},
+				},
+			},
+		},
+		&MarginNote{
+			baseToken: baseToken{
+				content: segment{
+					start: pos{
+						line:   0,
+						column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note]("),
+						offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note]("),
+					},
+					end: pos{
+						line:   0,
+						column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive"),
+						offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive"),
+					},
+				},
+			},
+			children: []Token{
+				&Text{
+					baseToken: baseToken{
+						content: segment{
+							start: pos{
+								line:   0,
+								column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note]("),
+								offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note]("),
+							},
+							end: pos{
+								line:   0,
+								column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image "),
+								offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image "),
+							},
+						},
+					},
+				},
+				&Image{
+					baseToken: baseToken{
+						content: segment{
+							start: pos{
+								line:   0,
+								column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption]("),
+								offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption]("),
+							},
+							end: pos{
+								line:   0,
+								column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg"),
+								offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg"),
+							},
+						},
+					},
+					Caption: []byte("catpion"),
+				},
+				&Text{
+					baseToken: baseToken{
+						content: segment{
+							start: pos{
+								line:   0,
+								column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg)"),
+								offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg)"),
+							},
+							end: pos{
+								line:   0,
+								column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive"),
+								offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive"),
+							},
+						},
+					},
+				},
+			},
+		},
+		&Jump{
+			baseToken: baseToken{
+				content: segment{
+					start: pos{
+						line:   0,
+						column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)"),
+						offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)"),
+					},
+					end: pos{
+						line:   0,
+						column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n"),
+						offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n"),
+					},
+				},
+			},
+		},
+		&Header{
+			baseToken: baseToken{
+				content: segment{
+					start: pos{
+						line:   0,
+						column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n## "),
+						offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n## "),
+					},
+					end: pos{
+						line:   0,
+						column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n## Second title"),
+						offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n## Second title"),
+					},
+				},
+			},
+			Level: 2,
+		},
+		&Jump{
+			baseToken: baseToken{
+				content: segment{
+					start: pos{
+						line:   0,
+						column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n## Second title"),
+						offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n## Second title"),
+					},
+					end: pos{
+						line:   0,
+						column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n## Second title\n"),
+						offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n## Second title\n"),
+					},
+				},
+			},
+		},
+		&Text{
+			baseToken: baseToken{
+				content: segment{
+					start: pos{
+						line:   0,
+						column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n## Second title\n"),
+						offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n## Second title\n"),
+					},
+					end: pos{
+						line:   0,
+						column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n## Second title\nThis is more text here "),
+						offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n## Second title\nThis is more text here "),
+					},
+				},
+			},
+		},
+		&Bold{
+			baseToken: baseToken{
+				content: segment{
+					start: pos{
+						line:   0,
+						column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n## Second title\nThis is more text here *"),
+						offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n## Second title\nThis is more text here *"),
+					},
+					end: pos{
+						line:   0,
+						column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n## Second title\nThis is more text here *bold"),
+						offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n## Second title\nThis is more text here *bold"),
+					},
+				},
+			},
+		},
+		&Text{
+			baseToken: baseToken{
+				content: segment{
+					start: pos{
+						line:   0,
+						column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n## Second title\nThis is more text here *bold*"),
+						offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n## Second title\nThis is more text here *bold*"),
+					},
+					end: pos{
+						line:   0,
+						column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n## Second title\nThis is more text here *bold* and "),
+						offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n## Second title\nThis is more text here *bold* and "),
+					},
+				},
+			},
+		},
+		&Italic{
+			baseToken: baseToken{
+				content: segment{
+					start: pos{
+						line:   0,
+						column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n## Second title\nThis is more text here *bold* and **"),
+						offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n## Second title\nThis is more text here *bold* and **"),
+					},
+					end: pos{
+						line:   0,
+						column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n## Second title\nThis is more text here *bold* and **italic"),
+						offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n## Second title\nThis is more text here *bold* and **italic"),
+					},
+				},
+			},
+		},
+		&Text{
+			baseToken: baseToken{
+				content: segment{
+					start: pos{
+						line:   0,
+						column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n## Second title\nThis is more text here *bold* and **italic**"),
+						offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n## Second title\nThis is more text here *bold* and **italic**"),
+					},
+					end: pos{
+						line:   0,
+						column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n## Second title\nThis is more text here *bold* and **italic**."),
+						offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n## Second title\nThis is more text here *bold* and **italic**."),
+					},
+				},
+			},
+		},
+		&Jump{
+			baseToken: baseToken{
+				content: segment{
+					start: pos{
+						line:   0,
+						column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n## Second title\nThis is more text here *bold* and **italic**."),
+						offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n## Second title\nThis is more text here *bold* and **italic**."),
+					},
+					end: pos{
+						line:   0,
+						column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n## Second title\nThis is more text here *bold* and **italic**.\n"),
+						offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n## Second title\nThis is more text here *bold* and **italic**.\n"),
+					},
+				},
+			},
+		},
+		&Text{
+			baseToken: baseToken{
+				content: segment{
+					start: pos{
+						line:   0,
+						column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n## Second title\nThis is more text here *bold* and **italic**.\n"),
+						offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n## Second title\nThis is more text here *bold* and **italic**.\n"),
+					},
+					end: pos{
+						line:   0,
+						column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n## Second title\nThis is more text here *bold* and **italic**.\nFinal note here."),
+						offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n## Second title\nThis is more text here *bold* and **italic**.\nFinal note here."),
+					},
+				},
+			},
+		},
+	}
+	tokens, errs := parser.Parse(source)
+	if len(errs) != 0 {
+		t.Errorf("expected to have 0 errors but got a lot %d", len(errs))
+	}
+
+	if len(tokens) != len(expectedTokens) {
+		t.Errorf("expected to have %d tokens, but got %d", len(expectedTokens), len(tokens))
+	}
+
+	for i := 0; i < len(tokens); i++ {
+		token := tokens[i]
+		expectedToken := expectedTokens[i]
+		if token.String() != expectedToken.String() {
+			t.Errorf("expected token to be %s but got %s", expectedTokens[i].String(), tokens[i].String())
+		}
+
+		if token.Start() != expectedToken.Start() || token.End() != expectedToken.End() {
+			t.Errorf("expected token to start in %d and end in %d but started in %d and ended in %d", expectedToken.Start(), expectedToken.End(), token.Start(), token.End())
+		}
+	}
+}
 
 func TestGetContentFromBalanced(t *testing.T) {
 	tests := []struct {
@@ -261,24 +671,26 @@ func TestParseFontModifiers(t *testing.T) {
 	tests := []struct {
 		name          string
 		source        []byte
-		expectedToken Token
+		expectedToken []Token
 		expectedErr   error
 	}{
 		{
 			name:   "correct bold",
 			source: []byte("*bold*"),
-			expectedToken: &Bold{
-				baseToken: baseToken{
-					content: segment{
-						start: pos{
-							line:   0,
-							column: len("*"),
-							offset: len("*"),
-						},
-						end: pos{
-							line:   0,
-							column: len("*bold"),
-							offset: len("*bold"),
+			expectedToken: []Token{
+				&Bold{
+					baseToken: baseToken{
+						content: segment{
+							start: pos{
+								line:   0,
+								column: len("*"),
+								offset: len("*"),
+							},
+							end: pos{
+								line:   0,
+								column: len("*bold"),
+								offset: len("*bold"),
+							},
 						},
 					},
 				},
@@ -286,25 +698,73 @@ func TestParseFontModifiers(t *testing.T) {
 			expectedErr: nil,
 		},
 		{
+			name:   "incorrect bold",
+			source: []byte("*bold"),
+			expectedToken: []Token{
+				&Text{
+					baseToken: baseToken{
+						content: segment{
+							start: pos{
+								line:   0,
+								column: 0,
+								offset: 0,
+							},
+							end: pos{
+								line:   0,
+								column: len("*bold"),
+								offset: len("*bold"),
+							},
+						},
+					},
+				},
+			},
+			expectedErr: ErrFontModifiersNotValid,
+		},
+		{
 			name:   "correct italic",
 			source: []byte("**italic**"),
-			expectedToken: &Italic{
-				baseToken: baseToken{
-					content: segment{
-						start: pos{
-							line:   0,
-							column: len("**"),
-							offset: len("**"),
-						},
-						end: pos{
-							line:   0,
-							column: len("**italic"),
-							offset: len("**italic"),
+			expectedToken: []Token{
+				&Italic{
+					baseToken: baseToken{
+						content: segment{
+							start: pos{
+								line:   0,
+								column: len("**"),
+								offset: len("**"),
+							},
+							end: pos{
+								line:   0,
+								column: len("**italic"),
+								offset: len("**italic"),
+							},
 						},
 					},
 				},
 			},
 			expectedErr: nil,
+		},
+		{
+			name:   "incorrect italic",
+			source: []byte("**italic*"),
+			expectedToken: []Token{
+				&Text{
+					baseToken: baseToken{
+						content: segment{
+							start: pos{
+								line:   0,
+								column: 0,
+								offset: 0,
+							},
+							end: pos{
+								line:   0,
+								column: len("**italic*"),
+								offset: len("**italic*"),
+							},
+						},
+					},
+				},
+			},
+			expectedErr: ErrFontModifiersNotValid,
 		},
 	}
 
@@ -317,21 +777,26 @@ func TestParseFontModifiers(t *testing.T) {
 				t.Errorf("expected error to be %s but got %s", tt.expectedErr, errs[0])
 			}
 
-			if len(tokens) != 1 {
-				t.Errorf("expected to have one token, but got %d instead", len(tokens))
+			if len(tokens) != len(tt.expectedToken) {
+				t.Errorf("expected to have %d tokens, but got %d instead", len(tt.expectedToken), len(tokens))
 			}
 
-			switch v := tokens[0].(type) {
-			case *Bold, *Italic:
-				if v.String() != tt.expectedToken.String() {
-					t.Errorf("expected token to be %s but got %s", tt.expectedToken.String(), v.String())
+			for i := 0; i < len(tokens); i++ {
+				if tokens[i].String() != tt.expectedToken[i].String() {
+					t.Errorf("expecting token to be %s but got %s", tt.expectedToken[i].String(), tokens[0].String())
 				}
 
-				if v.Start() != tt.expectedToken.Start() && v.End() != tt.expectedToken.End() {
-					t.Errorf("expected token to start in %d and end in %d but got start in %d and end in %d", tt.expectedToken.Start(), tt.expectedToken.End(), v.Start(), v.End())
+				if tokens[i].Start() != tt.expectedToken[i].Start() && tokens[i].End() != tt.expectedToken[i].End() {
+					t.Errorf("expected token to start in %d and end in %d but got start in %d and end in %d", tt.expectedToken[i].Start(), tt.expectedToken[i].End(), tokens[i].Start(), tokens[i].End())
 				}
-			default:
-				t.Fatalf("expected to be an Image but got %s", v.String())
+
+				switch v := tokens[i].(type) {
+				case *BlockCode:
+					blockCode := tt.expectedToken[i].(*BlockCode)
+					if !bytes.Equal(blockCode.Language, v.Language) {
+						t.Errorf("expected block code to have language %s but got %s", blockCode.Language, v.Language)
+					}
+				}
 			}
 		})
 	}
@@ -339,68 +804,106 @@ func TestParseFontModifiers(t *testing.T) {
 
 func TestParseHeader(t *testing.T) {
 	tests := []struct {
-		name          string
-		source        []byte
-		expectedToken Token
-		expectedErr   error
+		name           string
+		source         []byte
+		expectedTokens []Token
+		expectedErr    error
 	}{
 		{
 			name:   "correct header h1",
 			source: []byte("# Header\n"),
-			expectedToken: &Header{
-				baseToken: baseToken{
-					content: segment{
-						start: pos{
-							line:   0,
-							column: len("# "),
-							offset: len("# "),
+			expectedTokens: []Token{
+				&Header{
+					baseToken: baseToken{
+						content: segment{
+							start: pos{
+								line:   0,
+								column: len("# "),
+								offset: len("# "),
+							},
+							end: pos{
+								line:   0,
+								column: len("# Header"),
+								offset: len("# Header"),
+							},
 						},
-						end: pos{
-							line:   0,
-							column: len("# Header"),
-							offset: len("# Header"),
+					},
+					Level: 1,
+				},
+				&Jump{
+					baseToken: baseToken{
+						content: segment{
+							start: pos{
+								line:   0,
+								column: len("# Header"),
+								offset: len("# Header"),
+							},
+							end: pos{
+								line:   0,
+								column: len("# Header"),
+								offset: len("# Header"),
+							},
 						},
 					},
 				},
-				Level: 1,
 			},
 		},
 		{
 			name:   "correct header h2",
 			source: []byte("## Header\n"),
-			expectedToken: &Header{
-				baseToken: baseToken{
-					content: segment{
-						start: pos{
-							line:   0,
-							column: len("## "),
-							offset: len("## "),
+			expectedTokens: []Token{
+				&Header{
+					baseToken: baseToken{
+						content: segment{
+							start: pos{
+								line:   0,
+								column: len("## "),
+								offset: len("## "),
+							},
+							end: pos{
+								line:   0,
+								column: len("## Header"),
+								offset: len("## Header"),
+							},
 						},
-						end: pos{
-							line:   0,
-							column: len("## Header"),
-							offset: len("## Header"),
+					},
+					Level: 2,
+				},
+				&Text{
+					baseToken: baseToken{
+						content: segment{
+							start: pos{
+								line:   0,
+								column: len("## Header\n"),
+								offset: len("## Header\n"),
+							},
+							end: pos{
+								line:   0,
+								column: len("## Header\n"),
+								offset: len("## Header\n"),
+							},
 						},
 					},
 				},
-				Level: 2,
 			},
 		},
 		{
 			name:   "incorrect header",
 			source: []byte("#Header"),
-			expectedToken: &Text{
-				baseToken: baseToken{
-					content: segment{
-						start: pos{
-							line:   0,
-							column: len(""),
-							offset: len(""),
-						},
-						end: pos{
-							line:   0,
-							column: len("#Header"),
-							offset: len("#Header"),
+			expectedTokens: []Token{
+				&Text{
+					baseToken: baseToken{
+						content: segment{
+							start: pos{
+								line:   0,
+								column: 0,
+								offset: 0,
+							},
+							end: pos{
+								line:   0,
+								column: len("#Header"),
+								offset: len("#Header"),
+							},
 						},
 					},
 				},
@@ -418,26 +921,26 @@ func TestParseHeader(t *testing.T) {
 				t.Errorf("expected error to be %s but got %s", tt.expectedErr, errs[0])
 			}
 
-			if len(tokens) != 1 {
-				t.Errorf("expected to have one token, but got %d instead", len(tokens))
+			if len(tokens) != len(tt.expectedTokens) {
+				t.Errorf("expected to have %d tokens, but got %d instead", len(tt.expectedTokens), len(tokens))
 			}
 
-			switch v := tokens[0].(type) {
-			case *Header:
-				expectedHeader := tt.expectedToken.(*Header)
-				if v.Level != expectedHeader.Level {
-					t.Errorf("expected header to have level %d but got %d", v.Level, expectedHeader.Level)
+			for i := 0; i < len(tokens); i++ {
+				token := tokens[i]
+				expectedToken := tt.expectedTokens[i]
+
+				if token.Start() != expectedToken.Start() || token.End() != expectedToken.End() {
+					t.Errorf("expected token to start in %d and end in %d but got start in %d and end in %d", expectedToken.Start(), expectedToken.End(), token.Start(), token.End())
 				}
 
-				if v.Start() != tt.expectedToken.Start() && v.End() != tt.expectedToken.End() {
-					t.Errorf("expected token to start in %d and end in %d but got start in %d and end in %d", tt.expectedToken.Start(), tt.expectedToken.End(), v.Start(), v.End())
+				switch v := token.(type) {
+				case *Header:
+					expectedHeader := expectedToken.(*Header)
+					if v.Level != expectedHeader.Level {
+						t.Errorf("expected header to have level %d but got %d", v.Level, expectedHeader.Level)
+					}
 				}
-			case *Text:
-				if v.Start() != tt.expectedToken.Start() && v.End() != tt.expectedToken.End() {
-					t.Errorf("expected token to start in %d and end in %d but got start in %d and end in %d", tt.expectedToken.Start(), tt.expectedToken.End(), v.Start(), v.End())
-				}
-			default:
-				t.Errorf("expecting token to be %s but got %s", tt.expectedToken.String(), v.String())
+
 			}
 		})
 	}
@@ -551,6 +1054,149 @@ func TestParseText(t *testing.T) {
 
 			if text.Start() != tt.expectedToken.Start() && text.End() != tt.expectedToken.End() {
 				t.Errorf("expected token to start in %d and end in %d but got start in %d and end in %d", tt.expectedToken.Start(), tt.expectedToken.End(), text.Start(), text.End())
+			}
+		})
+	}
+}
+
+func TestParseCode(t *testing.T) {
+	tests := []struct {
+		name          string
+		source        []byte
+		expectedToken []Token
+		expectedErr   error
+	}{
+		{
+			name:   "correct inline code",
+			source: []byte("`this is inlined code`"),
+			expectedToken: []Token{
+				&InlineCode{
+					baseToken: baseToken{
+						content: segment{
+							start: pos{
+								line:   0,
+								column: len("`"),
+								offset: len("`"),
+							},
+							end: pos{
+								line:   0,
+								column: len("`this is inlined code"),
+								offset: len("`this is inlined code"),
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name:   "correct block code",
+			source: []byte("```go\nfunc() string {\n  return \"I am indeed\"\n}```"),
+			expectedToken: []Token{
+				&BlockCode{
+					baseToken: baseToken{
+						content: segment{
+							start: pos{
+								line:   0,
+								column: len("```go"),
+								offset: len("```go"),
+							},
+							end: pos{
+								line:   0,
+								column: len("```go\nfunc() string {\n  return \"I am indeed\"\n}"),
+								offset: len("```go\nfunc() string {\n  return \"I am indeed\"\n}"),
+							},
+						},
+					},
+					Language: []byte("go"),
+				},
+			},
+		},
+		{
+			name:   "incorrect inline code",
+			source: []byte("``this is inlined code``"),
+			expectedToken: []Token{
+				&Text{
+					baseToken: baseToken{
+						content: segment{
+							start: pos{
+								line:   0,
+								column: 0,
+								offset: 0,
+							},
+							end: pos{
+								line:   0,
+								column: len("`"),
+								offset: len("`"),
+							},
+						},
+					},
+				},
+				&InlineCode{
+					baseToken: baseToken{
+						content: segment{
+							start: pos{
+								line:   0,
+								column: len("``"),
+								offset: len("``"),
+							},
+							end: pos{
+								line:   0,
+								column: len("``this is inlined code`"),
+								offset: len("``this is inlined code`"),
+							},
+						},
+					},
+				},
+				&Text{
+					baseToken: baseToken{
+						content: segment{
+							start: pos{
+								line:   0,
+								column: len("``this is inlined code`"),
+								offset: len("``this is inlined code`"),
+							},
+							end: pos{
+								line:   0,
+								column: len("``this is inlined code``"),
+								offset: len("``this is inlined code``"),
+							},
+						},
+					},
+				},
+			},
+			expectedErr: ErrCodeNotValid,
+		},
+	}
+
+	var parser Parser
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			parser.Reset()
+			tokens, errs := parser.Parse(tt.source)
+			if len(errs) != 0 && !errors.Is(tt.expectedErr, errs[0]) {
+				t.Errorf("expected error to be %s but got %s", tt.expectedErr, errs[0])
+			}
+
+			if len(tokens) != len(tt.expectedToken) {
+				t.Errorf("expected to have %d tokens, but got %d instead", len(tt.expectedToken), len(tokens))
+			}
+
+			for i := 0; i < len(tokens); i++ {
+				if tokens[i].String() != tt.expectedToken[i].String() {
+					t.Errorf("expecting token to be %s but got %s", tt.expectedToken[i].String(), tokens[0].String())
+				}
+
+				if tokens[i].Start() != tt.expectedToken[i].Start() && tokens[i].End() != tt.expectedToken[i].End() {
+					t.Errorf("expected token to start in %d and end in %d but got start in %d and end in %d", tt.expectedToken[i].Start(), tt.expectedToken[i].End(), tokens[i].Start(), tokens[i].End())
+				}
+
+				switch v := tokens[i].(type) {
+				case *BlockCode:
+					blockCode := tt.expectedToken[i].(*BlockCode)
+					if !bytes.Equal(blockCode.Language, v.Language) {
+						t.Errorf("expected block code to have language %s but got %s", blockCode.Language, v.Language)
+					}
+				}
 			}
 		})
 	}

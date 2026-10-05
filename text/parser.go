@@ -3,12 +3,16 @@ package text
 import (
 	"errors"
 	"fmt"
+	"io"
 	"slices"
 )
 
 var (
 	ErrHeaderNotValid                   = errors.New("not valid header")
 	ErrFontModifiersNotValid            = errors.New("not valid font modifiers")
+	ErrBoldNotValid                     = errors.New("not valid bold")
+	ErrCodeNotValid                     = errors.New("not valid code")
+	ErrInlineCodeNotValid               = errors.New("not valid inline code")
 	ErrImageNotValid                    = errors.New("not valid image")
 	ErrLinkNotValid                     = errors.New("not valid link")
 	ErrNotValidMarkdown                 = errors.New("not valid markdown")
@@ -32,6 +36,11 @@ const (
 	subheaderIdentifier  = "^subheader"
 	marginNoteIdentifier = "^margin-note"
 	sideNoteIdentifier   = "^side-note"
+
+	inlineCodeTerminalChars = 1
+	blockCodeTerminalChars  = 3
+	boldTerminalChars       = 1
+	italicTerminalChars     = 2
 )
 
 type Parser struct {
@@ -66,6 +75,10 @@ func (p *Parser) Parse(source []byte) ([]Token, []error) {
 	var err error
 	var childParser Parser
 	for p.offset < len(source) {
+		if isAtEOF(source, p.offset+1) {
+			err = io.EOF
+			goto text
+		}
 	out:
 		switch source[p.offset] {
 		case title:
@@ -73,23 +86,21 @@ func (p *Parser) Parse(source []byte) ([]Token, []error) {
 				break
 			}
 			const maxLevel = 2
-			var level int
+			level := 1
 			for content < maxLevel {
-				if p.peek(source, content) == title {
+				if p.peek(source, level) == title {
 					level++
 				} else {
 					break
 				}
-				content++
 			}
 
-			if p.peek(source, content) != space {
+			if p.peek(source, level) != space {
 				err = ErrHeaderNotValid
 				break
 			}
 
-			content++ // Content starts after space
-			for range content {
+			for range level + 1 {
 				p.advance()
 			}
 
@@ -97,10 +108,12 @@ func (p *Parser) Parse(source []byte) ([]Token, []error) {
 				Level: level,
 			}
 
-			for source[content] != breakLine {
+			content = 1
+			for p.peek(source, content) != breakLine {
 				content++
 			}
 		case custom:
+			// All those that use getContentFromBalanced they do it wrong. It is actually having the content not advance until I want to
 			identifier, start, end, balancedErr := getContentFromBalanced(p.offset+1, source)
 			if balancedErr != nil {
 				err = fmt.Errorf("%w: %w", ErrCustomMarkdownNotValid, balancedErr)
@@ -181,28 +194,79 @@ func (p *Parser) Parse(source []byte) ([]Token, []error) {
 
 			content = end - start
 		case code:
-			// TODO: JUST DO IT!
-			// Parse code
-		case fontModifiers:
 			terminalChars := 1
-			if p.peek(source, 1) != fontModifiers {
-				token = &Bold{}
-			} else {
-				token = &Italic{}
-				terminalChars++
+			for terminalChars < blockCodeTerminalChars {
+				if p.peek(source, terminalChars) == code {
+					terminalChars++
+				} else {
+					break
+				}
 			}
-			content = terminalChars
 
-			for range content {
+			if terminalChars != inlineCodeTerminalChars && terminalChars != blockCodeTerminalChars {
+				err = ErrCodeNotValid
+				break
+			}
+
+			content = terminalChars
+			var language []byte
+			for i := 0; i < terminalChars; {
+				content++
+
+				if isAtEOF(source, p.offset+content) {
+					err = ErrCodeNotValid
+					break
+				}
+
+				switch terminalChars {
+				case inlineCodeTerminalChars:
+					if p.peek(source, content) == '\n' {
+						err = ErrInlineCodeNotValid
+						break out
+					}
+				case blockCodeTerminalChars:
+					if len(language) == 0 && p.peek(source, content) == '\n' {
+						language = source[p.offset+terminalChars : content]
+					}
+				}
+
+				if p.peek(source, content) == code {
+					i++
+				}
+			}
+
+			for range terminalChars + len(language) {
 				p.advance()
 			}
+
+			switch terminalChars {
+			case inlineCodeTerminalChars:
+				token = &InlineCode{}
+			case blockCodeTerminalChars:
+				token = &BlockCode{
+					Language: language,
+				}
+			}
+
+			content = content - terminalChars - len(language)
+		case fontModifiers:
+			terminalChars := 1
+			for terminalChars < italicTerminalChars {
+				if p.peek(source, terminalChars) == fontModifiers {
+					terminalChars++
+				} else {
+					break
+				}
+			}
+
+			content = terminalChars
 
 			for i := 0; i < terminalChars; {
 				content++
 
 				if isAtEOF(source, p.offset+content) {
 					err = ErrFontModifiersNotValid
-					break
+					break out
 				}
 
 				if p.peek(source, content) == '\n' {
@@ -214,20 +278,36 @@ func (p *Parser) Parse(source []byte) ([]Token, []error) {
 					i++
 				}
 			}
+
+			switch terminalChars {
+			case boldTerminalChars:
+				token = &Bold{}
+			case italicTerminalChars:
+				token = &Italic{}
+			}
+
+			for range terminalChars {
+				p.advance()
+			}
+
+			content = content - terminalChars
 		case breakLine:
 			token = &Jump{}
 			p.line++
 			p.column = 0
-		default:
-			err = ErrNotValidMarkdown
 		}
-
-		if err != nil {
-			errs = append(errs, err)
+		// This is used as a goto statement.
+		// It simplifies the logic and makes the program not need to check isAtEOF at first of each markdown type
+	text:
+		if token == nil {
 			token = &Text{}
 			for !isAtEOF(source, p.offset+content+1) && !slices.Contains([]byte{title, custom, link, code, image, fontModifiers, breakLine}, p.peek(source, content+1)) {
 				content++
 			}
+		}
+
+		if err != nil {
+			errs = append(errs, err)
 		}
 
 		token.SetContent(pos{

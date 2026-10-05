@@ -165,7 +165,7 @@ type SideNote struct {
 	children []Token
 }
 
-func (sn SideNote) String() string {
+func (_ SideNote) String() string {
 	return tokenString[sideNoteType]
 }
 
@@ -175,4 +175,21 @@ func (sn *SideNote) SetChildren(children []Token) {
 
 func (sn SideNote) GetChildren() []Token {
 	return sn.children
+}
+
+type InlineCode struct {
+	baseToken
+}
+
+func (_ InlineCode) String() string {
+	return tokenString[inlineCodeType]
+}
+
+type BlockCode struct {
+	baseToken
+	Language []byte
+}
+
+func (_ BlockCode) String() string {
+	return tokenString[blockCodeType]
 }
