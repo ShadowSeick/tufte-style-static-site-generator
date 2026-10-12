@@ -119,11 +119,11 @@ func (i Italic) String() string {
 	return tokenString[italicType]
 }
 
-type Jump struct {
+type LineFeed struct {
 	baseToken
 }
 
-func (j Jump) String() string {
+func (j LineFeed) String() string {
 	return tokenString[jumpType]
 }
 

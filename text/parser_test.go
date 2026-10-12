@@ -8,7 +8,6 @@ import (
 	"testing"
 )
 
-// TODO: Make a proper text to be parsed as expected at the end of it all
 func TestParse(t *testing.T) {
 	var parser Parser
 	// Get the fiel
@@ -36,18 +35,18 @@ func TestParse(t *testing.T) {
 			},
 			Level: 1,
 		},
-		&Jump{
+		&LineFeed{
 			baseToken: baseToken{
 				content: segment{
 					start: pos{
 						line:   0,
-						column: len("# Title\n"),
-						offset: len("# Title\n"),
+						column: len("# Title"),
+						offset: len("# Title"),
 					},
 					end: pos{
 						line:   0,
-						column: len("# Title\n?"),
-						offset: len("# Title\n?"),
+						column: len("# Title\n"),
+						offset: len("# Title\n"),
 					},
 				},
 			},
@@ -68,7 +67,23 @@ func TestParse(t *testing.T) {
 				},
 			},
 		},
-		&Jump{
+		&LineFeed{
+			baseToken: baseToken{
+				content: segment{
+					start: pos{
+						line:   0,
+						column: len("# Title\n?[^subheader](Subheader"),
+						offset: len("# Title\n?[^subheader](Subheader"),
+					},
+					end: pos{
+						line:   0,
+						column: len("# Title\n?[^subheader](Subheader)"),
+						offset: len("# Title\n?[^subheader](Subheader)"),
+					},
+				},
+			},
+		},
+		&Text{
 			baseToken: baseToken{
 				content: segment{
 					start: pos{
@@ -78,19 +93,19 @@ func TestParse(t *testing.T) {
 					},
 					end: pos{
 						line:   0,
-						column: len("# Title\n?[^subheader](Subheader)\n"),
-						offset: len("# Title\n?[^subheader](Subheader)\n"),
+						column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuf"),
+						offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuf"),
 					},
 				},
 			},
 		},
-		&Text{
+		&LineFeed{
 			baseToken: baseToken{
 				content: segment{
 					start: pos{
 						line:   0,
-						column: len("# Title\n?[^subheader](Subheader)\n"),
-						offset: len("# Title\n?[^subheader](Subheader)\n"),
+						column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuf"),
+						offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuf"),
 					},
 					end: pos{
 						line:   0,
@@ -100,7 +115,7 @@ func TestParse(t *testing.T) {
 				},
 			},
 		},
-		&Jump{
+		&Text{
 			baseToken: baseToken{
 				content: segment{
 					start: pos{
@@ -110,24 +125,8 @@ func TestParse(t *testing.T) {
 					},
 					end: pos{
 						line:   0,
-						column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\n"),
-						offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\n"),
-					},
-				},
-			},
-		},
-		&Text{
-			baseToken: baseToken{
-				content: segment{
-					start: pos{
-						line:   0,
-						column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\n"),
-						offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\n"),
-					},
-					end: pos{
-						line:   0,
-						column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here "),
-						offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here "),
+						column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here"),
+						offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here"),
 					},
 				},
 			},
@@ -137,8 +136,8 @@ func TestParse(t *testing.T) {
 				content: segment{
 					start: pos{
 						line:   0,
-						column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link]("),
-						offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link]("),
+						column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link]"),
+						offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link]"),
 					},
 					end: pos{
 						line:   0,
@@ -154,13 +153,13 @@ func TestParse(t *testing.T) {
 				content: segment{
 					start: pos{
 						line:   0,
-						column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com)"),
-						offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com)"),
+						column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com"),
+						offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com"),
 					},
 					end: pos{
 						line:   0,
-						column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note"),
-						offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note"),
+						column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin not"),
+						offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin not"),
 					},
 				},
 			},
@@ -170,8 +169,8 @@ func TestParse(t *testing.T) {
 				content: segment{
 					start: pos{
 						line:   0,
-						column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note]("),
-						offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note]("),
+						column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note]"),
+						offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note]"),
 					},
 					end: pos{
 						line:   0,
@@ -207,8 +206,8 @@ func TestParse(t *testing.T) {
 							},
 							end: pos{
 								line:   0,
-								column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg"),
-								offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg"),
+								column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg)"),
+								offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg)"),
 							},
 						},
 					},
@@ -232,18 +231,18 @@ func TestParse(t *testing.T) {
 				},
 			},
 		},
-		&Jump{
+		&LineFeed{
 			baseToken: baseToken{
 				content: segment{
 					start: pos{
 						line:   0,
-						column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)"),
-						offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)"),
+						column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive"),
+						offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive"),
 					},
 					end: pos{
 						line:   0,
-						column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n"),
-						offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n"),
+						column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)"),
+						offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)"),
 					},
 				},
 			},
@@ -253,30 +252,30 @@ func TestParse(t *testing.T) {
 				content: segment{
 					start: pos{
 						line:   0,
-						column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n## "),
-						offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n## "),
+						column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n##"),
+						offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n##"),
 					},
 					end: pos{
 						line:   0,
-						column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n## Second title"),
-						offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n## Second title"),
+						column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n## Second titl"),
+						offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n## Second titl"),
 					},
 				},
 			},
 			Level: 2,
 		},
-		&Jump{
+		&LineFeed{
 			baseToken: baseToken{
 				content: segment{
 					start: pos{
 						line:   0,
-						column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n## Second title"),
-						offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n## Second title"),
+						column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n## Second titl"),
+						offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n## Second titl"),
 					},
 					end: pos{
 						line:   0,
-						column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n## Second title\n"),
-						offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n## Second title\n"),
+						column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n## Second title"),
+						offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n## Second title"),
 					},
 				},
 			},
@@ -286,8 +285,8 @@ func TestParse(t *testing.T) {
 				content: segment{
 					start: pos{
 						line:   0,
-						column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n## Second title\n"),
-						offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n## Second title\n"),
+						column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n## Second title"),
+						offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n## Second title"),
 					},
 					end: pos{
 						line:   0,
@@ -307,8 +306,8 @@ func TestParse(t *testing.T) {
 					},
 					end: pos{
 						line:   0,
-						column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n## Second title\nThis is more text here *bold"),
-						offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n## Second title\nThis is more text here *bold"),
+						column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n## Second title\nThis is more text here *bold*"),
+						offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n## Second title\nThis is more text here *bold*"),
 					},
 				},
 			},
@@ -339,8 +338,8 @@ func TestParse(t *testing.T) {
 					},
 					end: pos{
 						line:   0,
-						column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n## Second title\nThis is more text here *bold* and **italic"),
-						offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n## Second title\nThis is more text here *bold* and **italic"),
+						column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n## Second title\nThis is more text here *bold* and **italic**"),
+						offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n## Second title\nThis is more text here *bold* and **italic**"),
 					},
 				},
 			},
@@ -361,7 +360,7 @@ func TestParse(t *testing.T) {
 				},
 			},
 		},
-		&Jump{
+		&LineFeed{
 			baseToken: baseToken{
 				content: segment{
 					start: pos{
@@ -393,6 +392,22 @@ func TestParse(t *testing.T) {
 				},
 			},
 		},
+		&LineFeed{
+			baseToken: baseToken{
+				content: segment{
+					start: pos{
+						line:   0,
+						column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n## Second title\nThis is more text here *bold* and **italic**.\nFinal note here."),
+						offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n## Second title\nThis is more text here *bold* and **italic**.\nFinal note here."),
+					},
+					end: pos{
+						line:   0,
+						column: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n## Second title\nThis is more text here *bold* and **italic**.\nFinal note here.") + 1,
+						offset: len("# Title\n?[^subheader](Subheader)\nThis is the main stuff\nSome text here [link](https://example.com). Here it goes a margin note?[^margin-note](with some image ![caption](articles/images/something.jpg). This is quite impressive)\n## Second title\nThis is more text here *bold* and **italic**.\nFinal note here.") + 1,
+					},
+				},
+			},
+		},
 	}
 	tokens, errs := parser.Parse(source)
 	if len(errs) != 0 {
@@ -403,7 +418,7 @@ func TestParse(t *testing.T) {
 		t.Errorf("expected to have %d tokens, but got %d", len(expectedTokens), len(tokens))
 	}
 
-	for i := 0; i < len(tokens); i++ {
+	for i := range len(tokens) {
 		token := tokens[i]
 		expectedToken := expectedTokens[i]
 		if token.String() != expectedToken.String() {
@@ -411,7 +426,7 @@ func TestParse(t *testing.T) {
 		}
 
 		if token.Start() != expectedToken.Start() || token.End() != expectedToken.End() {
-			t.Errorf("expected token to start in %d and end in %d but started in %d and ended in %d", expectedToken.Start(), expectedToken.End(), token.Start(), token.End())
+			t.Errorf("expected token %s to start in %d and end in %d but started in %d and ended in %d", token.String(), expectedToken.Start(), expectedToken.End(), token.Start(), token.End())
 		}
 	}
 }
@@ -432,7 +447,7 @@ func TestGetContentFromBalanced(t *testing.T) {
 			start:                len("some text here "),
 			expectedRes:          []byte("valid link"),
 			expectedContentStart: len("some text here [valid link]("),
-			expectedContentEnd:   len("some text here [valid link](https://example.com"),
+			expectedContentEnd:   len("some text here [valid link](https://example.com)"),
 			err:                  nil,
 		},
 		{
@@ -459,7 +474,7 @@ func TestGetContentFromBalanced(t *testing.T) {
 			start:                0,
 			expectedRes:          []byte("^some-random-thing"),
 			expectedContentStart: len("[^some-random-thing]("),
-			expectedContentEnd:   len("[^some-random-thing](This is something else ![image here](../../source/image.png)"),
+			expectedContentEnd:   len("[^some-random-thing](This is something else ![image here](../../source/image.png))"),
 			err:                  nil,
 		},
 		{
@@ -477,7 +492,7 @@ func TestGetContentFromBalanced(t *testing.T) {
 			start:                0,
 			expectedRes:          []byte("^some-random-thing"),
 			expectedContentStart: len("[^some-random-thing]("),
-			expectedContentEnd:   len("[^some-random-thing](This is something else ![image here](../../source/image.png)"),
+			expectedContentEnd:   len("[^some-random-thing](This is something else ![image here](../../source/image.png))"),
 			err:                  nil,
 		},
 		{
@@ -688,8 +703,8 @@ func TestParseFontModifiers(t *testing.T) {
 							},
 							end: pos{
 								line:   0,
-								column: len("*bold"),
-								offset: len("*bold"),
+								column: len("*bold*"),
+								offset: len("*bold*"),
 							},
 						},
 					},
@@ -734,8 +749,8 @@ func TestParseFontModifiers(t *testing.T) {
 							},
 							end: pos{
 								line:   0,
-								column: len("**italic"),
-								offset: len("**italic"),
+								column: len("**italic**"),
+								offset: len("**italic**"),
 							},
 						},
 					},
@@ -766,6 +781,45 @@ func TestParseFontModifiers(t *testing.T) {
 			},
 			expectedErr: ErrFontModifiersNotValid,
 		},
+		{
+			name:   "incorrect italic by line feed",
+			source: []byte("**italic\n"),
+			expectedToken: []Token{
+				&Text{
+					baseToken: baseToken{
+						content: segment{
+							start: pos{
+								line:   0,
+								column: 0,
+								offset: 0,
+							},
+							end: pos{
+								line:   0,
+								column: len("**italic"),
+								offset: len("**italic"),
+							},
+						},
+					},
+				},
+				&LineFeed{
+					baseToken: baseToken{
+						content: segment{
+							start: pos{
+								line:   0,
+								column: len("**italic"),
+								offset: len("**italic"),
+							},
+							end: pos{
+								line:   0,
+								column: len("**italic\n"),
+								offset: len("**italic\n"),
+							},
+						},
+					},
+				},
+			},
+			expectedErr: ErrFontModifiersNotValid,
+		},
 	}
 
 	var parser Parser
@@ -781,13 +835,13 @@ func TestParseFontModifiers(t *testing.T) {
 				t.Errorf("expected to have %d tokens, but got %d instead", len(tt.expectedToken), len(tokens))
 			}
 
-			for i := 0; i < len(tokens); i++ {
+			for i := range len(tokens) {
 				if tokens[i].String() != tt.expectedToken[i].String() {
 					t.Errorf("expecting token to be %s but got %s", tt.expectedToken[i].String(), tokens[0].String())
 				}
 
-				if tokens[i].Start() != tt.expectedToken[i].Start() && tokens[i].End() != tt.expectedToken[i].End() {
-					t.Errorf("expected token to start in %d and end in %d but got start in %d and end in %d", tt.expectedToken[i].Start(), tt.expectedToken[i].End(), tokens[i].Start(), tokens[i].End())
+				if tokens[i].Start() != tt.expectedToken[i].Start() || tokens[i].End() != tt.expectedToken[i].End() {
+					t.Errorf("expected token %s to start in %d and end in %d but got start in %d and end in %d", tokens[i].String(), tt.expectedToken[i].Start(), tt.expectedToken[i].End(), tokens[i].Start(), tokens[i].End())
 				}
 
 				switch v := tokens[i].(type) {
@@ -830,7 +884,7 @@ func TestParseHeader(t *testing.T) {
 					},
 					Level: 1,
 				},
-				&Jump{
+				&LineFeed{
 					baseToken: baseToken{
 						content: segment{
 							start: pos{
@@ -840,8 +894,8 @@ func TestParseHeader(t *testing.T) {
 							},
 							end: pos{
 								line:   0,
-								column: len("# Header"),
-								offset: len("# Header"),
+								column: len("# Header\n"),
+								offset: len("# Header\n"),
 							},
 						},
 					},
@@ -874,8 +928,8 @@ func TestParseHeader(t *testing.T) {
 						content: segment{
 							start: pos{
 								line:   0,
-								column: len("## Header\n"),
-								offset: len("## Header\n"),
+								column: len("## Header"),
+								offset: len("## Header"),
 							},
 							end: pos{
 								line:   0,
@@ -925,7 +979,7 @@ func TestParseHeader(t *testing.T) {
 				t.Errorf("expected to have %d tokens, but got %d instead", len(tt.expectedTokens), len(tokens))
 			}
 
-			for i := 0; i < len(tokens); i++ {
+			for i := range len(tokens) {
 				token := tokens[i]
 				expectedToken := tt.expectedTokens[i]
 
@@ -966,8 +1020,8 @@ func TestParseSubheader(t *testing.T) {
 						},
 						end: pos{
 							line:   0,
-							column: len("?[^subheader](Subheader"),
-							offset: len("?[^subheader](Subheader"),
+							column: len("?[^subheader](Subheader)"),
+							offset: len("?[^subheader](Subheader)"),
 						},
 					},
 				},
@@ -1080,8 +1134,8 @@ func TestParseCode(t *testing.T) {
 							},
 							end: pos{
 								line:   0,
-								column: len("`this is inlined code"),
-								offset: len("`this is inlined code"),
+								column: len("`this is inlined code`"),
+								offset: len("`this is inlined code`"),
 							},
 						},
 					},
@@ -1102,8 +1156,8 @@ func TestParseCode(t *testing.T) {
 							},
 							end: pos{
 								line:   0,
-								column: len("```go\nfunc() string {\n  return \"I am indeed\"\n}"),
-								offset: len("```go\nfunc() string {\n  return \"I am indeed\"\n}"),
+								column: len("```go\nfunc() string {\n  return \"I am indeed\"\n}```"),
+								offset: len("```go\nfunc() string {\n  return \"I am indeed\"\n}```"),
 							},
 						},
 					},
@@ -1125,24 +1179,8 @@ func TestParseCode(t *testing.T) {
 							},
 							end: pos{
 								line:   0,
-								column: len("`"),
-								offset: len("`"),
-							},
-						},
-					},
-				},
-				&InlineCode{
-					baseToken: baseToken{
-						content: segment{
-							start: pos{
-								line:   0,
-								column: len("``"),
-								offset: len("``"),
-							},
-							end: pos{
-								line:   0,
-								column: len("``this is inlined code`"),
-								offset: len("``this is inlined code`"),
+								column: len("``this is inlined code"),
+								offset: len("``this is inlined code"),
 							},
 						},
 					},
@@ -1152,8 +1190,8 @@ func TestParseCode(t *testing.T) {
 						content: segment{
 							start: pos{
 								line:   0,
-								column: len("``this is inlined code`"),
-								offset: len("``this is inlined code`"),
+								column: len("``this is inlined code"),
+								offset: len("``this is inlined code"),
 							},
 							end: pos{
 								line:   0,
@@ -1181,7 +1219,7 @@ func TestParseCode(t *testing.T) {
 				t.Errorf("expected to have %d tokens, but got %d instead", len(tt.expectedToken), len(tokens))
 			}
 
-			for i := 0; i < len(tokens); i++ {
+			for i := range len(tokens) {
 				if tokens[i].String() != tt.expectedToken[i].String() {
 					t.Errorf("expecting token to be %s but got %s", tt.expectedToken[i].String(), tokens[0].String())
 				}
@@ -1222,8 +1260,8 @@ func TestParseMarginNote(t *testing.T) {
 						},
 						end: pos{
 							line:   0,
-							column: len("?[^margin-note](*bold* but **italic** with a [link](https://example.com)"),
-							offset: len("?[^margin-note](*bold* but **italic** with a [link](https://example.com)"),
+							column: len("?[^margin-note](*bold* but **italic** with a [link](https://example.com))"),
+							offset: len("?[^margin-note](*bold* but **italic** with a [link](https://example.com))"),
 						},
 					},
 				},
@@ -1238,8 +1276,8 @@ func TestParseMarginNote(t *testing.T) {
 								},
 								end: pos{
 									line:   0,
-									column: len("?[^margin-note](*bold"),
-									offset: len("?[^margin-note](*bold"),
+									column: len("?[^margin-note](*bold*"),
+									offset: len("?[^margin-note](*bold*"),
 								},
 							},
 						},
@@ -1270,8 +1308,8 @@ func TestParseMarginNote(t *testing.T) {
 								},
 								end: pos{
 									line:   0,
-									column: len("?[^margin-note](*bold* but **italic"),
-									offset: len("?[^margin-note](*bold* but **italic"),
+									column: len("?[^margin-note](*bold* but **italic**"),
+									offset: len("?[^margin-note](*bold* but **italic**"),
 								},
 							},
 						},
@@ -1286,8 +1324,8 @@ func TestParseMarginNote(t *testing.T) {
 								},
 								end: pos{
 									line:   0,
-									column: len("?[^margin-note](*bold* but **italic** with a"),
-									offset: len("?[^margin-note](*bold* but **italic** with a"),
+									column: len("?[^margin-note](*bold* but **italic** with a "),
+									offset: len("?[^margin-note](*bold* but **italic** with a "),
 								},
 							},
 						},
@@ -1302,8 +1340,8 @@ func TestParseMarginNote(t *testing.T) {
 								},
 								end: pos{
 									line:   0,
-									column: len("?[^margin-note](*bold* but **italic** with a [link](https://example.com"),
-									offset: len("?[^margin-note](*bold* but **italic** with a [link](https://example.com"),
+									column: len("?[^margin-note](*bold* but **italic** with a [link](https://example.com)"),
+									offset: len("?[^margin-note](*bold* but **italic** with a [link](https://example.com)"),
 								},
 							},
 						},
@@ -1342,14 +1380,14 @@ func TestParseMarginNote(t *testing.T) {
 				t.Errorf("expected having %d children, instead got %d", len(expectedChildren), len(marginNote.children))
 			}
 
-			for i := 0; i < len(children); i++ {
+			for i := range len(children) {
 				child := children[i]
 				expectedChild := expectedChildren[i]
 				if child.String() != expectedChild.String() {
 					t.Errorf("expected token to be %s, but got %s", expectedChild.String(), child.String())
 				}
 
-				if child.Start() != expectedChild.Start() && child.End() != expectedChild.End() {
+				if child.Start() != expectedChild.Start() || child.End() != expectedChild.End() {
 					t.Errorf(
 						"expected token %s and got %s;\n Expected to start in %d but started in %d; Expected to end in %d but ended in %d",
 						expectedChild.String(), child.String(), expectedChild.Start(), child.Start(), expectedChild.End(), child.End())
@@ -1383,8 +1421,8 @@ func TestParseSideNote(t *testing.T) {
 						},
 						end: pos{
 							line:   0,
-							column: len("?[^side-note](https://example.com)"),
-							offset: len("?[^side-note](https://example.com)"),
+							column: len("?[^side-note](https://example.com))"),
+							offset: len("?[^side-note](https://example.com))"),
 						},
 					},
 				},
@@ -1399,8 +1437,8 @@ func TestParseSideNote(t *testing.T) {
 								},
 								end: pos{
 									line:   0,
-									column: len("?[^side-note](*bold"),
-									offset: len("?[^side-note](*bold"),
+									column: len("?[^side-note](*bold*"),
+									offset: len("?[^side-note](*bold*"),
 								},
 							},
 						},
@@ -1431,8 +1469,8 @@ func TestParseSideNote(t *testing.T) {
 								},
 								end: pos{
 									line:   0,
-									column: len("?[^side-note](*bold* but **italic"),
-									offset: len("?[^side-note](*bold* but **italic"),
+									column: len("?[^side-note](*bold* but **italic**"),
+									offset: len("?[^side-note](*bold* but **italic**"),
 								},
 							},
 						},
@@ -1463,8 +1501,8 @@ func TestParseSideNote(t *testing.T) {
 								},
 								end: pos{
 									line:   0,
-									column: len("?[^side-note](*bold* but **italic** with a [link](https://example.com"),
-									offset: len("?[^side-note](*bold* but **italic** with a [link](https://example.com"),
+									column: len("?[^side-note](*bold* but **italic** with a [link](https://example.com)"),
+									offset: len("?[^side-note](*bold* but **italic** with a [link](https://example.com)"),
 								},
 							},
 						},
@@ -1503,13 +1541,13 @@ func TestParseSideNote(t *testing.T) {
 				t.Errorf("expected having %d children, instead got %d", len(expectedChildren), len(sideNote.children))
 			}
 
-			for i := 0; i < len(children); i++ {
+			for i := range len(tokens) {
 				child := children[i]
 				expectedChild := expectedChildren[i]
 				if child.String() != expectedChild.String() {
 					t.Errorf("expected token to be %s, but got %s", expectedChild.String(), child.String())
 				}
-				if child.Start() != expectedChild.Start() && child.End() != expectedChild.End() {
+				if child.Start() != expectedChild.Start() || child.End() != expectedChild.End() {
 					t.Errorf(
 						"expected token %s and got %s;\n Expected to start in %d but started in %d; Expected to end in %d but ended in %d",
 						expectedChild.String(), child.String(), expectedChild.Start(), child.Start(), expectedChild.End(), child.End())

@@ -3,7 +3,6 @@ package text
 import (
 	"errors"
 	"fmt"
-	"io"
 	"slices"
 )
 
@@ -23,13 +22,13 @@ var (
 )
 
 const (
-	title         = '#'
+	header        = '#'
 	custom        = '?'
 	link          = '['
 	code          = '`'
 	image         = '!'
 	fontModifiers = '*'
-	breakLine     = '\n'
+	lineFeed      = '\n'
 
 	space = ' '
 
@@ -56,17 +55,8 @@ func (p *Parser) Reset() {
 	p.line = 0
 }
 
-// Parse can be much simpler. For more information why http://number-none.com/blow/blog/programming/2014/09/26/carmack-on-inlined-code.html
-// - I am duplicating a lot of variables and logic
-// - It needs a lot of implicit knowledge
-// - Not really straightforward
-// - A lot of jumping
-//
-// One example is that I am using parseChildren to get the tokens from it, it is not necessary, I can use a parse function that accepts a source in bytes
-// Once I have this, I can recursively call it to parse the children for a specific part of the source
-// There are many like that, but mostly is the tendency of overusing parseText and adding the same logic many times
-//
-// After the tests have been done, I will refactor heavily to make it smaller, simpler and more maintainable
+// Parse remade plenty of times. Finaly inlined to be simpler.
+// For more information why http://number-none.com/blow/blog/programming/2014/09/26/carmack-on-inlined-code.html
 func (p *Parser) Parse(source []byte) ([]Token, []error) {
 	var errs []error
 	var tokens []Token
@@ -75,20 +65,17 @@ func (p *Parser) Parse(source []byte) ([]Token, []error) {
 	var err error
 	var childParser Parser
 	for p.offset < len(source) {
-		if isAtEOF(source, p.offset+1) {
-			err = io.EOF
-			goto text
-		}
 	out:
 		switch source[p.offset] {
-		case title:
-			if p.column != 0 {
+		case header:
+			if p.column > 1 {
 				break
 			}
+
 			const maxLevel = 2
 			level := 1
 			for content < maxLevel {
-				if p.peek(source, level) == title {
+				if p.peek(source, level) == header {
 					level++
 				} else {
 					break
@@ -97,10 +84,11 @@ func (p *Parser) Parse(source []byte) ([]Token, []error) {
 
 			if p.peek(source, level) != space {
 				err = ErrHeaderNotValid
+				content = level // We set the content to level, otherwise it will be an infinite loop
 				break
 			}
 
-			for range level + 1 {
+			for range level + 1 { // Drop space
 				p.advance()
 			}
 
@@ -108,12 +96,10 @@ func (p *Parser) Parse(source []byte) ([]Token, []error) {
 				Level: level,
 			}
 
-			content = 1
-			for p.peek(source, content) != breakLine {
+			for p.peek(source, content) != lineFeed {
 				content++
 			}
 		case custom:
-			// All those that use getContentFromBalanced they do it wrong. It is actually having the content not advance until I want to
 			identifier, start, end, balancedErr := getContentFromBalanced(p.offset+1, source)
 			if balancedErr != nil {
 				err = fmt.Errorf("%w: %w", ErrCustomMarkdownNotValid, balancedErr)
@@ -143,12 +129,11 @@ func (p *Parser) Parse(source []byte) ([]Token, []error) {
 			if customToken != nil {
 				// We use the childParser to not affect the current one.
 				// Surely there is a better way, but for now it will be enough
-				// TODO: Make proper recursive call
 				childParser.Reset()
 				childParser.offset = p.offset
 				childParser.column = p.column
 				childParser.line = p.line
-				children, childErrs := childParser.Parse(source[:p.offset+content])
+				children, childErrs := childParser.Parse(source[:p.offset+content-1])
 				if len(childErrs) != 0 {
 					for _, childErr := range childErrs {
 						if err == nil {
@@ -196,19 +181,19 @@ func (p *Parser) Parse(source []byte) ([]Token, []error) {
 		case code:
 			terminalChars := 1
 			for terminalChars < blockCodeTerminalChars {
-				if p.peek(source, terminalChars) == code {
+				if !isAtEOF(source, p.offset+terminalChars) && p.peek(source, terminalChars) == code {
 					terminalChars++
 				} else {
 					break
 				}
 			}
 
+			content = terminalChars
 			if terminalChars != inlineCodeTerminalChars && terminalChars != blockCodeTerminalChars {
 				err = ErrCodeNotValid
 				break
 			}
 
-			content = terminalChars
 			var language []byte
 			for i := 0; i < terminalChars; {
 				content++
@@ -248,11 +233,11 @@ func (p *Parser) Parse(source []byte) ([]Token, []error) {
 				}
 			}
 
-			content = content - terminalChars - len(language)
+			content = content - len(language)
 		case fontModifiers:
 			terminalChars := 1
 			for terminalChars < italicTerminalChars {
-				if p.peek(source, terminalChars) == fontModifiers {
+				if !isAtEOF(source, p.offset+terminalChars) && p.peek(source, terminalChars) == fontModifiers {
 					terminalChars++
 				} else {
 					break
@@ -260,7 +245,6 @@ func (p *Parser) Parse(source []byte) ([]Token, []error) {
 			}
 
 			content = terminalChars
-
 			for i := 0; i < terminalChars; {
 				content++
 
@@ -284,24 +268,23 @@ func (p *Parser) Parse(source []byte) ([]Token, []error) {
 				token = &Bold{}
 			case italicTerminalChars:
 				token = &Italic{}
+				content--
 			}
 
 			for range terminalChars {
 				p.advance()
 			}
-
-			content = content - terminalChars
-		case breakLine:
-			token = &Jump{}
+		case lineFeed:
+			token = &LineFeed{}
+			content = 1
 			p.line++
 			p.column = 0
 		}
 		// This is used as a goto statement.
 		// It simplifies the logic and makes the program not need to check isAtEOF at first of each markdown type
-	text:
 		if token == nil {
 			token = &Text{}
-			for !isAtEOF(source, p.offset+content+1) && !slices.Contains([]byte{title, custom, link, code, image, fontModifiers, breakLine}, p.peek(source, content+1)) {
+			for !isAtEOF(source, p.offset+content) && !slices.Contains([]byte{header, custom, link, code, image, fontModifiers, lineFeed}, p.peek(source, content)) {
 				content++
 			}
 		}
@@ -324,11 +307,6 @@ func (p *Parser) Parse(source []byte) ([]Token, []error) {
 
 		// Advance the content to the last byte from the token content
 		for range content {
-			p.advance()
-		}
-
-		// Go to the next byte
-		if !isAtEOF(source, p.offset) {
 			p.advance()
 		}
 
@@ -416,5 +394,5 @@ contentLoop:
 		return nil, 0, 0, ErrNotValidMarkdownStructureContent
 	}
 
-	return source[start+1 : nameIdx], nameIdx + 2, contentEnd, nil
+	return source[start+1 : nameIdx], nameIdx + 2, contentEnd + 1, nil
 }
