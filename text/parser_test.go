@@ -10,7 +10,6 @@ import (
 
 func TestParse(t *testing.T) {
 	var parser Parser
-	// Get the fiel
 	filePath := filepath.Join("data", "testdata.md")
 	source, err := os.ReadFile(filePath)
 	if err != nil {

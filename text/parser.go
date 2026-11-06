@@ -72,9 +72,8 @@ func (p *Parser) Parse(source []byte) ([]Token, []error) {
 				break
 			}
 
-			const maxLevel = 2
 			level := 1
-			for content < maxLevel {
+			for content < int(headerCount) {
 				if p.peek(source, level) == header {
 					level++
 				} else {
@@ -93,7 +92,7 @@ func (p *Parser) Parse(source []byte) ([]Token, []error) {
 			}
 
 			token = &Header{
-				Level: level,
+				Level: headerLevel(level),
 			}
 
 			for p.peek(source, content) != lineFeed {

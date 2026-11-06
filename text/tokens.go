@@ -76,9 +76,19 @@ func (b baseToken) End() int {
 	return b.content.end.offset
 }
 
+type headerLevel int
+
+const (
+	_ headerLevel = iota
+	header1
+	header2
+	header3
+	headerCount
+)
+
 type Header struct {
 	baseToken
-	Level int
+	Level headerLevel
 }
 
 func (h Header) String() string {
@@ -90,8 +100,12 @@ type Link struct {
 	Name []byte
 }
 
-func (l Link) String() string {
+func (Link) String() string {
 	return tokenString[linkType]
+}
+
+func (l Link) End() int {
+	return l.baseToken.End() - 1
 }
 
 type Image struct {
@@ -99,31 +113,43 @@ type Image struct {
 	Caption []byte
 }
 
-func (i Image) String() string {
+func (Image) String() string {
 	return tokenString[imageType]
+}
+
+func (i Image) End() int {
+	return i.baseToken.End() - 1
 }
 
 type Bold struct {
 	baseToken
 }
 
-func (b Bold) String() string {
+func (Bold) String() string {
 	return tokenString[boldType]
+}
+
+func (b Bold) End() int {
+	return b.baseToken.End() - 1
 }
 
 type Italic struct {
 	baseToken
 }
 
-func (i Italic) String() string {
+func (Italic) String() string {
 	return tokenString[italicType]
+}
+
+func (i Italic) End() int {
+	return i.baseToken.End() - 2
 }
 
 type LineFeed struct {
 	baseToken
 }
 
-func (j LineFeed) String() string {
+func (LineFeed) String() string {
 	return tokenString[jumpType]
 }
 
@@ -131,7 +157,7 @@ type Text struct {
 	baseToken
 }
 
-func (t Text) String() string {
+func (Text) String() string {
 	return tokenString[textType]
 }
 
@@ -143,12 +169,16 @@ func (sub Subheader) String() string {
 	return tokenString[subheaderType]
 }
 
+func (sub Subheader) End() int {
+	return sub.baseToken.End() - 1
+}
+
 type MarginNote struct {
 	baseToken
 	children []Token
 }
 
-func (mn MarginNote) String() string {
+func (MarginNote) String() string {
 	return tokenString[marginNoteType]
 }
 
@@ -165,7 +195,7 @@ type SideNote struct {
 	children []Token
 }
 
-func (_ SideNote) String() string {
+func (SideNote) String() string {
 	return tokenString[sideNoteType]
 }
 

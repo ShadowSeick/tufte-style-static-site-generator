@@ -1,0 +1,9 @@
+<article><section><h1>Title</h1>
+<p class="subtitle">Subtitle</p>
+This is the main stuff
+Some text here <a href="https://example.com">link</a>. Here it goes a margin note?<label for="mn-0" class="margin-toggle">⊕</label>
+				<input type="checkbox" id="mn-0" class="margin-toggle"/><span class="marginnote">with some image <figure><img src="articles/images/something.jpg"/></figure>. This is quite impressive</span>
+<h2>Second title</h2>
+There is more text <b>bold</b> and <em>italic</em>.
+Final note here.
+</section></article>
